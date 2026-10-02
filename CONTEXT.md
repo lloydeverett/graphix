@@ -1,6 +1,6 @@
 # graphix
 
-A browser-only live editor for Mermaid diagrams: you type diagram text on one side and see the rendered diagram on the other.
+A browser-only live editor for Mermaid diagrams: you type Mermaid Source on one side and see its Preview on the other.
 
 ## Language
 

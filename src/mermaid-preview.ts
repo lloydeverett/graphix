@@ -5,7 +5,35 @@ import mermaid from 'mermaid';
 
 const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
 
-let renderCount = 0;
+type Theme = 'default' | 'dark';
+
+function currentTheme(): Theme {
+  return darkScheme.matches ? 'dark' : 'default';
+}
+
+function configureMermaid() {
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    suppressErrorRendering: true,
+    theme: currentTheme(),
+  });
+}
+
+configureMermaid();
+
+type RenderResult = { svg: string } | { error: string };
+
+let nextDiagramId = 0;
+
+async function renderDiagram(source: string): Promise<RenderResult> {
+  try {
+    const { svg } = await mermaid.render(`graphix-${++nextDiagramId}`, source);
+    return { svg };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
 
 /**
  * Renders a Source as a Preview. On a Render Error the Preview keeps the last
@@ -50,7 +78,12 @@ export class MermaidPreview extends LitElement {
   @state() svg = '';
   @state() renderError = '';
 
-  #latestRender = 0;
+  /** Results of any render older than this are stale and dropped. */
+  #latestRenderId = 0;
+
+  /** The Source behind the current Preview, and the theme it was drawn in. */
+  #lastGoodSource = '';
+  #lastGoodTheme = currentTheme();
 
   connectedCallback() {
     super.connectedCallback();
@@ -63,6 +96,7 @@ export class MermaidPreview extends LitElement {
   }
 
   #onSchemeChange = () => {
+    configureMermaid();
     void this.#render();
   };
 
@@ -71,31 +105,38 @@ export class MermaidPreview extends LitElement {
   }
 
   async #render() {
-    const render = ++this.#latestRender;
+    const renderId = ++this.#latestRenderId;
     const source = this.source;
 
     if (source.trim() === '') {
-      this.svg = '';
+      this.#showPreview('', '');
       this.renderError = '';
       return;
     }
 
-    mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: 'strict',
-      suppressErrorRendering: true,
-      theme: darkScheme.matches ? 'dark' : 'default',
-    });
+    const result = await renderDiagram(source);
+    if (renderId !== this.#latestRenderId) return;
 
-    try {
-      const { svg } = await mermaid.render(`graphix-${++renderCount}`, source);
-      if (render !== this.#latestRender) return;
-      this.svg = svg;
+    if ('svg' in result) {
+      this.#showPreview(source, result.svg);
       this.renderError = '';
-    } catch (error) {
-      if (render !== this.#latestRender) return;
-      this.renderError = error instanceof Error ? error.message : String(error);
+      return;
     }
+
+    this.renderError = result.error;
+
+    // The kept Preview may be in the previous theme; redraw it in the current one.
+    if (this.#lastGoodSource && this.#lastGoodTheme !== currentTheme()) {
+      const redrawn = await renderDiagram(this.#lastGoodSource);
+      if (renderId !== this.#latestRenderId) return;
+      if ('svg' in redrawn) this.#showPreview(this.#lastGoodSource, redrawn.svg);
+    }
+  }
+
+  #showPreview(source: string, svg: string) {
+    this.#lastGoodSource = source;
+    this.#lastGoodTheme = currentTheme();
+    this.svg = svg;
   }
 
   render() {
