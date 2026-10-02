@@ -2,7 +2,7 @@
   "name": "graphix",
   "private": true,
   "version": "0.0.0",
-  "description": "Live in-browser Mermaid diagram editor",
+  "description": "Live in-browser HTML editor with Mermaid diagrams",
   "source": "src/index.html",
   "type": "module",
   "packageManager": "pnpm@12.8.1",

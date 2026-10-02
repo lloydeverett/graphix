@@ -1,20 +1,30 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import './mermaid-preview.js';
+import './preview-pane.js';
 
-const STORAGE_KEY = 'graphix:source';
+const STORAGE_KEY = 'graphix:html-source';
+/** Where Sources were kept back when a Source was plain Mermaid. */
+const MERMAID_STORAGE_KEY = 'graphix:source';
 const RENDER_DELAY_MS = 200;
 
-const EXAMPLE_SOURCE = `flowchart LR
-    A[Type Mermaid on the left] --> B{Valid?}
-    B -- yes --> C[Preview updates]
-    B -- no --> D[Render Error shown]
-    D --> A
+const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
+<p>Write HTML on the left. Wrap Mermaid in <code>&lt;gx-mermaid&gt;</code> to draw a diagram.</p>
+
+<gx-mermaid>
+  flowchart LR
+    A[Type HTML on the left] --> B[Preview updates]
+    B --> C{gx-mermaid?}
+    C -- yes --> D[Diagram drawn]
+</gx-mermaid>
 `;
 
 function loadSource(): string {
   try {
-    return localStorage.getItem(STORAGE_KEY) ?? EXAMPLE_SOURCE;
+    const source = localStorage.getItem(STORAGE_KEY);
+    if (source !== null) return source;
+    const mermaidSource = localStorage.getItem(MERMAID_STORAGE_KEY);
+    if (mermaidSource !== null) return `<gx-mermaid>\n${mermaidSource}\n</gx-mermaid>\n`;
+    return EXAMPLE_SOURCE;
   } catch {
     return EXAMPLE_SOURCE;
   }
@@ -53,9 +63,6 @@ export class GraphixApp extends LitElement {
       tab-size: 4;
     }
 
-    mermaid-preview {
-      padding: 16px;
-    }
 
     @media (max-width: 720px) {
       :host {
@@ -95,12 +102,12 @@ export class GraphixApp extends LitElement {
   render() {
     return html`
       <textarea
-        aria-label="Mermaid source"
+        aria-label="HTML source"
         spellcheck="false"
         .value=${this.source}
         @input=${this.#onInput}
       ></textarea>
-      <mermaid-preview .source=${this.previewSource}></mermaid-preview>
+      <preview-pane .source=${this.previewSource}></preview-pane>
     `;
   }
 }

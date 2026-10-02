@@ -1,9 +1,7 @@
 @import './theme.css';
 
-html,
 body {
-  margin: 0;
-  height: 100%;
+  margin: 16px;
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, sans-serif;

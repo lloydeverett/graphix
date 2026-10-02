@@ -1,6 +1,22 @@
 # graphix
 
-A live Mermaid editor that runs entirely in the browser: type Mermaid on the left, see the diagram on the right.
+A live HTML editor that runs entirely in the browser: type HTML on the left, see it rendered on the right.
+Wrap Mermaid in `<gx-mermaid>` to draw a diagram:
+
+```html
+<gx-mermaid>
+  flowchart LR
+    A --> B
+</gx-mermaid>
+```
+
+The preview runs in a sandboxed iframe (`allow-scripts` only), so scripts in
+your HTML run without access to the editor. Edits update the preview in place;
+**Refresh** rebuilds it from scratch.
+
+When hosting the built site, serve the preview's scripts with
+`Access-Control-Allow-Origin: *`: the sandboxed iframe has an opaque origin,
+so its module scripts load as cross-origin requests.
 
 ## Setup
 
