@@ -1,0 +1,27 @@
+{
+  "name": "graphix",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Live in-browser Mermaid diagram editor",
+  "source": "src/index.html",
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "scripts": {
+    "dev": "parcel",
+    "build": "parcel build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.3.3",
+    "mermaid": "^12.0.0"
+  },
+  "devDependencies": {
+    "buffer": "^6.0.3",
+    "parcel": "^2.16.4",
+    "process": "^0.11.10",
+    "typescript": "^7.0.2"
+  },
+  "@parcel/resolver-default": {
+    "packageExports": true
+  }
+}
