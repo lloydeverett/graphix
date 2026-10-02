@@ -3,7 +3,6 @@ import { customElement, state } from 'lit/decorators.js';
 import './preview-pane.js';
 
 const STORAGE_KEY = 'graphix:source';
-const RENDER_DELAY_MS = 200;
 
 const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
 <p>Write HTML on the left. Wrap Mermaid in <code>&lt;gx-mermaid&gt;</code> to draw a diagram.</p>
@@ -73,23 +72,9 @@ export class GraphixApp extends LitElement {
   /** The Source as typed. */
   @state() source = loadSource();
 
-  /** The Source handed to the Preview, lagging typing by RENDER_DELAY_MS. */
-  @state() previewSource = this.source;
-
-  #renderTimer?: ReturnType<typeof setTimeout>;
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    clearTimeout(this.#renderTimer);
-  }
-
   #onInput(event: InputEvent) {
     this.source = (event.target as HTMLTextAreaElement).value;
     saveSource(this.source);
-    clearTimeout(this.#renderTimer);
-    this.#renderTimer = setTimeout(() => {
-      this.previewSource = this.source;
-    }, RENDER_DELAY_MS);
   }
 
   render() {
@@ -100,7 +85,7 @@ export class GraphixApp extends LitElement {
         .value=${this.source}
         @input=${this.#onInput}
       ></textarea>
-      <preview-pane .source=${this.previewSource}></preview-pane>
+      <preview-pane .source=${this.source}></preview-pane>
     `;
   }
 }
