@@ -5,6 +5,12 @@ import { type SourceMessage, isReadyMessage } from './preview-protocol.js';
 
 const PREVIEW_URL = new URL('./preview.html', import.meta.url);
 
+/** crypto.randomUUID needs a secure context; the dev server may be plain HTTP. */
+function newNonce() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 /**
  * The query string carries the nonce: unlike the iframe's name, it doesn't
  * follow the iframe to another page, and unlike the hash, in-page links
@@ -58,7 +64,7 @@ export class PreviewPane extends LitElement {
   @property() source = '';
 
   /** Identifies the current iframe; a new one gets a new nonce. */
-  @state() nonce = crypto.randomUUID();
+  @state() nonce = newNonce();
 
   /** Connects to the current iframe's runtime once it reports ready. */
   #port?: MessagePort;
@@ -78,7 +84,7 @@ export class PreviewPane extends LitElement {
   refresh() {
     this.#port?.close();
     this.#port = undefined;
-    this.nonce = crypto.randomUUID();
+    this.nonce = newNonce();
   }
 
   #onMessage = (event: MessageEvent) => {
