@@ -2,9 +2,7 @@ import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import './preview-pane.js';
 
-const STORAGE_KEY = 'graphix:html-source';
-/** Where Sources were kept back when a Source was plain Mermaid. */
-const MERMAID_STORAGE_KEY = 'graphix:source';
+const STORAGE_KEY = 'graphix:source';
 const RENDER_DELAY_MS = 200;
 
 const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
@@ -20,11 +18,7 @@ const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
 
 function loadSource(): string {
   try {
-    const source = localStorage.getItem(STORAGE_KEY);
-    if (source !== null) return source;
-    const mermaidSource = localStorage.getItem(MERMAID_STORAGE_KEY);
-    if (mermaidSource !== null) return `<gx-mermaid>\n${mermaidSource}\n</gx-mermaid>\n`;
-    return EXAMPLE_SOURCE;
+    return localStorage.getItem(STORAGE_KEY) ?? EXAMPLE_SOURCE;
   } catch {
     return EXAMPLE_SOURCE;
   }
@@ -62,7 +56,6 @@ export class GraphixApp extends LitElement {
       font: 14px/1.5 ui-monospace, monospace;
       tab-size: 4;
     }
-
 
     @media (max-width: 720px) {
       :host {

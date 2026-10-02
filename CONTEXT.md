@@ -5,7 +5,7 @@ A browser-only live HTML editor: you type HTML Source on one side and see its Pr
 ## Language
 
 **Source**:
-The HTML fragment the user is editing; it becomes the body of the Preview.
+The HTML fragment the user is editing; it becomes the body of the Preview. Nothing in it runs code.
 _Avoid_: input, markdown, code, document
 
 **Preview**:
@@ -13,7 +13,7 @@ The Source rendered in a sandboxed iframe. It is updated in place as the Source 
 _Avoid_: output, live view, render
 
 **Refresh**:
-Throwing away the Preview's iframe and building it afresh from the current Source, clearing any state left behind by earlier edits or scripts.
+Throwing away the Preview's iframe and building it afresh from the current Source, clearing any state left behind by earlier edits.
 _Avoid_: reload, reset
 
 **Diagram**:

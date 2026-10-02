@@ -77,7 +77,7 @@ export class PreviewPane extends LitElement {
     const [port] = event.ports;
     if (!port) return;
 
-    // A reload of the same iframe sends a new port; the old one is dead.
+    // If the iframe loads our page again, it sends a new port; the old one is dead.
     this.#port?.close();
     this.#port = port;
     this.#send();
@@ -103,8 +103,9 @@ export class PreviewPane extends LitElement {
         this.nonce,
         html`<iframe
           title="Preview"
+          name=${this.nonce}
           sandbox="allow-scripts"
-          src=${`${PREVIEW_URL.href}#${this.nonce}`}
+          src=${PREVIEW_URL.href}
         ></iframe>`,
       )}
     `;

@@ -28,14 +28,14 @@ darkScheme.addEventListener('change', configureMermaid);
 type RenderResult = { svg: string } | { error: string };
 
 /**
- * Finished renders by theme and Mermaid source. Lets a re-created element
- * (e.g. after editing the HTML around it) show its diagram without flicker.
+ * Finished renders by theme and Mermaid text. Lets a re-created Diagram
+ * (e.g. after editing the HTML around it) show its drawing without flicker.
  */
 const renderCache = new Map<string, RenderResult>();
 const RENDER_CACHE_SIZE = 100;
 
-function cacheKey(source: string) {
-  return `${currentTheme()}\n${source}`;
+function cacheKey(theme: Theme, text: string) {
+  return `${theme}\n${text}`;
 }
 
 let nextDiagramId = 0;
@@ -56,20 +56,24 @@ function scratchElement() {
   return scratch;
 }
 
-async function renderDiagram(source: string): Promise<RenderResult> {
-  const key = cacheKey(source);
-  const cached = renderCache.get(key);
+async function renderDiagram(text: string): Promise<RenderResult> {
+  const theme = currentTheme();
+  const cached = renderCache.get(cacheKey(theme, text));
   if (cached) return cached;
 
   let result: RenderResult;
   try {
-    const { svg } = await mermaid.render(`gx-mermaid-${++nextDiagramId}`, source, scratchElement());
+    const { svg } = await mermaid.render(`gx-mermaid-${++nextDiagramId}`, text, scratchElement());
     result = { svg };
   } catch (error) {
     result = { error: error instanceof Error ? error.message : String(error) };
   }
 
-  renderCache.set(key, result);
+  // Mermaid queues renders, so the theme may have flipped before this one ran;
+  // its drawing could then be in either theme, so don't cache it.
+  if (theme !== currentTheme()) return result;
+
+  renderCache.set(cacheKey(theme, text), result);
   if (renderCache.size > RENDER_CACHE_SIZE) {
     renderCache.delete(renderCache.keys().next().value!);
   }
@@ -87,8 +91,8 @@ function dedent(text: string) {
 }
 
 /**
- * Renders its text content as a Mermaid diagram. On a Render Error it keeps
- * the last diagram that rendered successfully and shows the error above it.
+ * A Diagram: draws its text content as Mermaid. On a Render Error it keeps
+ * the last drawing that rendered successfully and shows the error above it.
  */
 @customElement('gx-mermaid')
 export class GxMermaid extends LitElement {
@@ -125,8 +129,8 @@ export class GxMermaid extends LitElement {
   /** Results of any render older than this are stale and dropped. */
   #latestRenderId = 0;
 
-  /** The Mermaid source behind the current diagram, and the theme it was drawn in. */
-  #lastGoodSource = '';
+  /** The Mermaid text behind the current drawing, and the theme it was drawn in. */
+  #lastGoodText = '';
   #lastGoodTheme = currentTheme();
 
   #observer = new MutationObserver(() => void this.#render());
@@ -148,35 +152,35 @@ export class GxMermaid extends LitElement {
 
   async #render() {
     const renderId = ++this.#latestRenderId;
-    const source = dedent(this.textContent ?? '');
+    const text = dedent(this.textContent ?? '');
 
-    if (source === '') {
+    if (text === '') {
       this.#showDiagram('', '');
       this.renderError = '';
       return;
     }
 
-    const result = await renderDiagram(source);
+    const result = await renderDiagram(text);
     if (renderId !== this.#latestRenderId) return;
 
     if ('svg' in result) {
-      this.#showDiagram(source, result.svg);
+      this.#showDiagram(text, result.svg);
       this.renderError = '';
       return;
     }
 
     this.renderError = result.error;
 
-    // The kept diagram may be in the previous theme; redraw it in the current one.
-    if (this.#lastGoodSource && this.#lastGoodTheme !== currentTheme()) {
-      const redrawn = await renderDiagram(this.#lastGoodSource);
+    // The kept drawing may be in the previous theme; redraw it in the current one.
+    if (this.#lastGoodText && this.#lastGoodTheme !== currentTheme()) {
+      const redrawn = await renderDiagram(this.#lastGoodText);
       if (renderId !== this.#latestRenderId) return;
-      if ('svg' in redrawn) this.#showDiagram(this.#lastGoodSource, redrawn.svg);
+      if ('svg' in redrawn) this.#showDiagram(this.#lastGoodText, redrawn.svg);
     }
   }
 
-  #showDiagram(source: string, svg: string) {
-    this.#lastGoodSource = source;
+  #showDiagram(text: string, svg: string) {
+    this.#lastGoodText = text;
     this.#lastGoodTheme = currentTheme();
     this.svg = svg;
   }
