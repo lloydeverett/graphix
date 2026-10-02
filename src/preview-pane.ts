@@ -3,7 +3,12 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { type SourceMessage, isReadyMessage } from './preview-protocol.js';
 
-const PREVIEW_URL = new URL('./preview.html', import.meta.url);
+/**
+ * preview.html is its own Parcel entry, served beside the editor. Reached via
+ * `new URL(..., import.meta.url)` instead, Parcel bundles its scripts without
+ * running them.
+ */
+const PREVIEW_URL = new URL('preview.html', document.baseURI);
 
 /** crypto.randomUUID needs a secure context; the dev server may be plain HTTP. */
 function newNonce() {

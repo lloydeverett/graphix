@@ -39,6 +39,10 @@ pnpm install --frozen-lockfile
 - `pnpm dev`: dev server at http://localhost:1234
 - `pnpm build`: static site in `dist/`
 - `pnpm typecheck`: `tsc --noEmit`
+- `pnpm test:e2e`: Playwright end-to-end tests, against both the dev server and
+  a production build. The first time, run `pnpm exec playwright install
+  chromium` (on Linux, also `pnpm exec playwright install-deps chromium`, plus
+  fonts if the system has none).
 
 ## Dependencies
 

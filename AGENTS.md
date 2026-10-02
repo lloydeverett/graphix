@@ -1,0 +1,35 @@
+# Agent notes
+
+graphix is a live HTML editor. `README.md` covers what it does and how to run it;
+`CONTEXT.md` is the glossary. Use its terms (Source, Preview, Refresh, Diagram,
+Render Error) in code, comments and commits.
+
+## Before calling a change done
+
+Run both, and make sure they pass:
+
+```sh
+pnpm typecheck
+pnpm test:e2e
+```
+
+The e2e tests drive a real Chromium against the dev server and a production
+build, which differ (only dev allows `eval`). A failing test leaves a trace in
+`test-results/`; open it with `pnpm exec playwright show-trace <trace.zip>`.
+
+When you change behaviour, add or update a test in `e2e/` that would have
+caught the change. A test fails on any console error it doesn't expect, from the
+editor or the Preview; tests that expect some declare them with
+`test.use({ allowedErrors: [...] })`.
+
+## Things that have bitten us
+
+- The Preview iframe is sandboxed with an opaque origin and talks to the editor
+  only over a MessagePort. Its scripts load as cross-origin requests, so servers
+  must send `Access-Control-Allow-Origin: *`.
+- `src/preview.html` must stay a separate Parcel entry (`source` in
+  `package.json`). Reached through `new URL(..., import.meta.url)` instead,
+  Parcel bundles its runtime without ever running it, and the Preview stays
+  empty without any error.
+- The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
+  Nothing in the Source may run code.
