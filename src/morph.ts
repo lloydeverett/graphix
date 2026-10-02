@@ -2,8 +2,8 @@
  * Updates a live DOM tree in place to match a freshly parsed one, so unchanged
  * nodes (and their state, such as drawn Diagrams) survive each edit.
  *
- * Parsed <script> elements are marked as already started, so moving them into
- * the document never runs them.
+ * The HTML parser marks the <script> elements it creates here as already
+ * started, so moving them into the document never runs them.
  */
 
 /** Marks runtime-owned elements that the morph must leave alone. */
@@ -23,7 +23,7 @@ export function morphChildren(target: Node, parsed: Node) {
 
     if (!node) {
       target.appendChild(want);
-    } else if (node.isEqualNode(want)) {
+    } else if (isEqual(node, want)) {
       i++;
     } else if (findEqualAhead(node, wanted, j + 1) !== -1) {
       // The current node reappears later, so `want` was inserted before it.
@@ -72,9 +72,18 @@ function morphNode(node: Node, want: Node) {
 function findEqualAhead(node: Node, nodes: Node[], from: number) {
   const end = Math.min(nodes.length, from + LOOKAHEAD);
   for (let k = from; k < end; k++) {
-    if (nodes[k].isEqualNode(node)) return k;
+    if (isEqual(nodes[k], node)) return k;
   }
   return -1;
+}
+
+/**
+ * isEqualNode can't see template content, so anything holding a template
+ * never counts as equal and always gets morphed.
+ */
+function isEqual(a: Node, b: Node) {
+  if (!a.isEqualNode(b)) return false;
+  return !(a instanceof HTMLTemplateElement || (a instanceof Element && a.querySelector('template')));
 }
 
 function sameKind(a: Node, b: Node) {

@@ -10,9 +10,15 @@ Wrap Mermaid in `<gx-mermaid>` to draw a diagram:
 </gx-mermaid>
 ```
 
+The HTML parser reads `<gx-mermaid>`'s contents before Mermaid does, so
+Mermaid that looks like HTML must be escaped: write `&lt;&lt;interface&gt;&gt;`
+for `<<interface>>`, `A[one&lt;br&gt;two]` for `A[one<br>two]`, and `&amp;` for
+a literal `&`.
+
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
-`<script>` elements, inline event handlers and `javascript:` URLs are all
-inert. Edits update the preview in place; **Refresh** rebuilds it from scratch.
+`<script>` elements, inline event handlers, `javascript:` URLs, `eval` and
+plugins are all blocked. (`pnpm dev` allows `eval`, which Parcel's hot reloading
+needs; nothing in your HTML can reach it.) Edits update the preview in place; **Refresh** rebuilds it from scratch.
 
 When hosting the built site, serve the preview's scripts with
 `Access-Control-Allow-Origin: *`: the sandboxed iframe has an opaque origin,

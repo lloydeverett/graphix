@@ -3,7 +3,7 @@
  *
  * The iframe has an opaque origin, so the editor can't reach into its DOM.
  * Instead, on startup the iframe posts a Ready message carrying the nonce it
- * was given as its name and a MessagePort; the editor then sends each
+ * was given in its URL and a MessagePort; the editor then sends each
  * Source over that port. If the iframe navigates away, the port dies with the
  * old document, so a foreign page never receives the Source.
  */

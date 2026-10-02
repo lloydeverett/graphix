@@ -6,6 +6,17 @@ import { type SourceMessage, isReadyMessage } from './preview-protocol.js';
 const PREVIEW_URL = new URL('./preview.html', import.meta.url);
 
 /**
+ * The query string carries the nonce: unlike the iframe's name, it doesn't
+ * follow the iframe to another page, and unlike the hash, in-page links
+ * don't change it.
+ */
+function previewUrl(nonce: string) {
+  const url = new URL(PREVIEW_URL);
+  url.searchParams.set('nonce', nonce);
+  return url.href;
+}
+
+/**
  * Shows a Source as a Preview: the HTML rendered in a sandboxed iframe, which
  * is updated in place as the Source changes and rebuilt only on Refresh.
  */
@@ -103,9 +114,8 @@ export class PreviewPane extends LitElement {
         this.nonce,
         html`<iframe
           title="Preview"
-          name=${this.nonce}
           sandbox="allow-scripts"
-          src=${PREVIEW_URL.href}
+          src=${previewUrl(this.nonce)}
         ></iframe>`,
       )}
     `;
