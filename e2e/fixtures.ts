@@ -19,15 +19,30 @@ export class Editor {
     return this.page.frameLocator('iframe[title="Preview"]');
   }
 
-  async type(source: string) {
+  /** The drawing of the Preview's only Diagram. */
+  get diagram() {
+    return this.preview.locator('gx-mermaid .diagram > svg');
+  }
+
+  /** Replaces the whole Source at once. */
+  async setSource(source: string) {
     await this.sourceBox.fill(source);
   }
 
-  /** Runs `fn` inside the current Preview iframe. */
+  /** Runs `fn` inside the current Preview iframe, retrying if a Refresh swaps it. */
   async inPreview<T>(fn: () => T | Promise<T>): Promise<T> {
-    const handle = await this.page.locator('iframe[title="Preview"]').elementHandle();
-    const frame = await handle!.contentFrame();
-    return frame!.evaluate(fn);
+    return this.preview.locator(':root').evaluate(fn);
+  }
+
+  /** Tags the Preview element at `selector`, so a test can tell if it's replaced. */
+  async mark(selector: string) {
+    await this.preview.locator(selector).evaluate((element) => {
+      Object.assign(element, { graphixMarker: true });
+    });
+  }
+
+  async isMarked(selector: string) {
+    return this.preview.locator(selector).evaluate((element) => 'graphixMarker' in element);
   }
 }
 

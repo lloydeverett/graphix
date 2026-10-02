@@ -3,9 +3,10 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { extname, join, normalize } from 'node:path';
+import { extname, resolve, sep } from 'node:path';
 
-const [root, port] = process.argv.slice(2);
+const [dir, port] = process.argv.slice(2);
+const root = resolve(dir);
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -16,13 +17,21 @@ const TYPES = {
   '.woff2': 'font/woff2',
 };
 
-createServer(async (request, response) => {
-  const { pathname } = new URL(request.url, 'http://localhost');
-  const relative = pathname === '/' ? 'index.html' : decodeURIComponent(pathname);
-  const file = join(root, normalize(relative).replace(/^(\.\.[/\\])+/, ''));
+/** The file under `root` that `url` names, or undefined if it names none. */
+async function fileFor(url) {
   try {
-    if (!(await stat(file)).isFile()) throw new Error('not a file');
+    const { pathname } = new URL(url, 'http://localhost');
+    const file = resolve(root, `.${decodeURIComponent(pathname === '/' ? '/index.html' : pathname)}`);
+    if (!file.startsWith(root + sep)) return undefined;
+    return (await stat(file)).isFile() ? file : undefined;
   } catch {
+    return undefined;
+  }
+}
+
+createServer(async (request, response) => {
+  const file = await fileFor(request.url);
+  if (!file) {
     response.writeHead(404).end();
     return;
   }
@@ -30,5 +39,7 @@ createServer(async (request, response) => {
     'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream',
     'Access-Control-Allow-Origin': '*',
   });
-  createReadStream(file).pipe(response);
-}).listen(Number(port));
+  createReadStream(file)
+    .on('error', () => response.destroy())
+    .pipe(response);
+}).listen(Number(port), '127.0.0.1');
