@@ -47,7 +47,8 @@ editor or the Preview; tests that expect some declare them with
 - `src/source-editor.ts` wraps CodeMirror without a shadow root, and themes it
   through `EditorView.theme` and tokens in `theme.css` (`--syntax-*`,
   `--editor-font-size`). Put media queries in `theme.css`: a rule nested in
-  `@media` inside `EditorView.theme` didn't take effect. The editor's text stays at least 16px
-  on touch screens, or mobile browsers zoom in when it's focused.
+  `@media` inside `EditorView.theme` didn't take effect. The editor's text
+  stays at least 16px on touch screens, or mobile browsers zoom in when it's
+  focused.
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.
