@@ -6,8 +6,8 @@ import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 
-const [dir, port, flag] = process.argv.slice(2);
-const cors = flag !== '--no-cors';
+const [dir, port] = process.argv.slice(2);
+const cors = !process.argv.includes('--no-cors');
 const root = resolve(dir);
 
 const TYPES = {
@@ -23,7 +23,8 @@ const TYPES = {
 async function fileFor(url) {
   try {
     const { pathname } = new URL(url, 'http://localhost');
-    const file = resolve(root, `.${decodeURIComponent(pathname === '/' ? '/index.html' : pathname)}`);
+    const path = pathname.endsWith('/') ? `${pathname}index.html` : pathname;
+    const file = resolve(root, `.${decodeURIComponent(path)}`);
     if (!file.startsWith(root + sep)) return undefined;
     return (await stat(file)).isFile() ? file : undefined;
   } catch {

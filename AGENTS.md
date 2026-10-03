@@ -34,7 +34,8 @@ editor or the Preview; tests that expect some declare them with
   sandbox, and uses relative URLs so the site works from a subpath. The CSP
   still stops the Source from running code, but the Preview is no longer
   isolated from the editor by origin, so never make it the default. The
-  `same-origin` e2e project builds this way and serves it without CORS.
+  `same-origin` e2e project runs `pnpm build:same-origin` and serves the result
+  from a subpath without CORS, as an Artifact does.
 - `src/preview.html` must stay a separate Parcel entry (`source` in
   `package.json`). Reached through `new URL(..., import.meta.url)` instead,
   Parcel bundles its runtime without ever running it, and the Preview stays

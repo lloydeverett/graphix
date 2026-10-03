@@ -21,8 +21,9 @@ export default defineConfig({
   projects: [
     { name: 'dev', use: { baseURL: `http://${HOST}:${DEV_PORT}` } },
     { name: 'prod', use: { baseURL: `http://${HOST}:${PROD_PORT}` } },
-    // Built with GRAPHIX_SAME_ORIGIN_PREVIEW=1 and served without CORS.
-    { name: 'same-origin', use: { baseURL: `http://${HOST}:${SAME_ORIGIN_PORT}` } },
+    // Built by `pnpm build:same-origin`, served without CORS from a subpath, as
+    // a claude.ai Artifact serves it.
+    { name: 'same-origin', use: { baseURL: `http://${HOST}:${SAME_ORIGIN_PORT}/app/` } },
   ],
   webServer: [
     {
@@ -36,9 +37,8 @@ export default defineConfig({
       timeout: 180_000,
     },
     {
-      command: `parcel build ${parcelDirs('same-origin')} && node e2e/serve-dist.mjs .playwright/same-origin-dist ${SAME_ORIGIN_PORT} --no-cors`,
-      env: { GRAPHIX_SAME_ORIGIN_PREVIEW: '1' },
-      url: `http://${HOST}:${SAME_ORIGIN_PORT}`,
+      command: `pnpm build:same-origin --dist-dir .playwright/same-origin-dist/app --cache-dir .playwright/same-origin-cache && node e2e/serve-dist.mjs .playwright/same-origin-dist ${SAME_ORIGIN_PORT} --no-cors`,
+      url: `http://${HOST}:${SAME_ORIGIN_PORT}/app/`,
       timeout: 180_000,
     },
   ],
