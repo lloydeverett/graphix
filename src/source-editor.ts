@@ -47,7 +47,7 @@ const theme = EditorView.theme({
  */
 @customElement('source-editor')
 export class SourceEditor extends LitElement {
-  /** The Source. Setting it from outside replaces the document, as one undoable edit. */
+  /** The Source. Setting it from outside replaces the Source in the editor, as one undoable edit. */
   @property() value = '';
 
   #view?: EditorView;
