@@ -1,7 +1,7 @@
 import { type Editor, expect, test } from './fixtures.js';
 
 test('shows the example Source on first load', async ({ editor }) => {
-  await expect(editor.sourceBox).toHaveValue(/Hello, graphix/);
+  await expect(editor.sourceBox).toContainText('Hello, graphix');
   await expect(editor.preview.getByRole('heading', { name: 'Hello, graphix' })).toBeVisible();
 });
 
@@ -14,7 +14,7 @@ test('keeps the Source when the page is opened again', async ({ editor, page }) 
   await editor.setSource('<p>saved</p>');
   await expect(editor.preview.getByText('saved')).toBeVisible();
   await page.reload();
-  await expect(editor.sourceBox).toHaveValue('<p>saved</p>');
+  await expect(editor.sourceBox).toHaveText('<p>saved</p>');
   await expect(editor.preview.getByText('saved')).toBeVisible();
 });
 

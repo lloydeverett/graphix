@@ -39,5 +39,11 @@ editor or the Preview; tests that expect some declare them with
   `package.json`). Reached through `new URL(..., import.meta.url)` instead,
   Parcel bundles its runtime without ever running it, and the Preview stays
   empty without any error.
+- Parcel strips TypeScript with SWC, which drops `import { type X } from './m.js'`
+  entirely, though `tsc` keeps it as a side-effect import. If you need the
+  module's side effects (a custom element defining itself), add a plain
+  `import './m.js'`, or the element silently never upgrades.
+- `src/source-editor.ts` wraps CodeMirror without a shadow root, and themes it
+  through `EditorView.theme` and the `--syntax-*` tokens in `theme.css`.
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.

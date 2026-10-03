@@ -1,6 +1,9 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import './preview-pane.js';
+// Parcel drops a type-only import entirely, so import for the side effect too.
+import './source-editor.js';
+import type { SourceEditor } from './source-editor.js';
 
 const STORAGE_KEY = 'graphix:source';
 
@@ -40,20 +43,10 @@ export class GraphixApp extends LitElement {
       height: 100vh;
     }
 
-    textarea {
-      box-sizing: border-box;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 16px;
-      border: none;
+    source-editor {
+      display: block;
+      min-height: 0;
       border-right: 1px solid var(--border);
-      outline: none;
-      resize: none;
-      background: var(--surface);
-      color: var(--fg);
-      font: 14px/1.5 ui-monospace, monospace;
-      tab-size: 4;
     }
 
     @media (max-width: 720px) {
@@ -62,7 +55,7 @@ export class GraphixApp extends LitElement {
         grid-template-rows: 40vh 1fr;
       }
 
-      textarea {
+      source-editor {
         border-right: none;
         border-bottom: 1px solid var(--border);
       }
@@ -72,19 +65,14 @@ export class GraphixApp extends LitElement {
   /** The Source as typed. */
   @state() source = loadSource();
 
-  #onInput(event: InputEvent) {
-    this.source = (event.target as HTMLTextAreaElement).value;
+  #onInput(event: Event) {
+    this.source = (event.target as SourceEditor).value;
     saveSource(this.source);
   }
 
   render() {
     return html`
-      <textarea
-        aria-label="HTML source"
-        spellcheck="false"
-        .value=${this.source}
-        @input=${this.#onInput}
-      ></textarea>
+      <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
       <preview-pane .source=${this.source}></preview-pane>
     `;
   }
