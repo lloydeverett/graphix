@@ -39,8 +39,11 @@ export class GraphixApp extends LitElement {
   static styles = css`
     :host {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* minmax(0, …) keeps long content from widening its track. */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      /* On mobile, vh counts the space behind the browser's toolbars; dvh doesn't. */
       height: 100vh;
+      height: 100dvh;
     }
 
     source-editor {
@@ -51,8 +54,8 @@ export class GraphixApp extends LitElement {
 
     @media (max-width: 720px) {
       :host {
-        grid-template-columns: 1fr;
-        grid-template-rows: 40vh 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
       }
 
       source-editor {

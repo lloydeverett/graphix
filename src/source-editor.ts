@@ -20,7 +20,7 @@ const theme = EditorView.theme({
     height: '100%',
     background: 'var(--surface)',
     color: 'var(--fg)',
-    fontSize: '14px',
+    fontSize: 'var(--editor-font-size)',
   },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'ui-monospace, monospace', lineHeight: '1.5' },

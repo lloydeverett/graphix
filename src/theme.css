@@ -1,5 +1,6 @@
 :root {
   color-scheme: light dark;
+  --editor-font-size: 14px;
   --bg: #ffffff;
   --fg: #1f2328;
   --border: #d1d9e0;
@@ -32,5 +33,12 @@
     --syntax-string: #a5d6ff;
     --syntax-comment: #9198a1;
     --syntax-keyword: #ff7b72;
+  }
+}
+
+/* Mobile browsers zoom in on focused text smaller than 16px. */
+@media (pointer: coarse) {
+  :root {
+    --editor-font-size: 16px;
   }
 }
