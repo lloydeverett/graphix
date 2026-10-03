@@ -8,7 +8,9 @@ test("uses text large enough that mobile browsers don't zoom in on focus", async
   expect(fontSize).toBeGreaterThanOrEqual(16);
 });
 
-test('fits the viewport exactly, with no page scrolling', async ({ editor, page }) => {
+// Emulation has no collapsing browser toolbar, so 100vh equals the viewport here
+// and this can't catch a vh-sized layout; it guards against overflow in general.
+test("doesn't scroll the page at phone size", async ({ editor, page }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
   // A long unbroken line must wrap rather than widen the page.
   await editor.setSource(`<p>${'x'.repeat(500)}</p>`);
