@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "parcel",
     "build": "parcel build",
+    "build:same-origin": "GRAPHIX_SAME_ORIGIN_PREVIEW=1 parcel build --public-url ./",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test"
   },

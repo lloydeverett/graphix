@@ -50,7 +50,7 @@ test('Refresh rebuilds the Preview from scratch', async ({ editor, page }) => {
   await expect(editor.preview.getByText('fresh')).toBeVisible();
 });
 
-test("the Preview can't reach the editor", async ({ editor }) => {
+test("the Preview can't reach the editor, unless built same-origin", async ({ editor }, testInfo) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
   const reach = await editor.inPreview(() => {
     try {
@@ -59,8 +59,9 @@ test("the Preview can't reach the editor", async ({ editor }) => {
       return 'blocked';
     }
   });
-  expect(reach).toBe('blocked');
-  expect(await editor.inPreview(() => origin)).toBe('null');
+  const sameOrigin = testInfo.project.name === 'same-origin';
+  expect(reach).toBe(sameOrigin ? 'reached' : 'blocked');
+  expect(await editor.inPreview(() => origin)).toBe(sameOrigin ? new URL(editor.page.url()).origin : 'null');
 });
 
 /** Starts recording the CSP directives the Preview's current document enforces. */

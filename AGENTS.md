@@ -26,7 +26,15 @@ editor or the Preview; tests that expect some declare them with
 
 - The Preview iframe is sandboxed with an opaque origin and talks to the editor
   only over a MessagePort. Its scripts load as cross-origin requests, so servers
-  must send `Access-Control-Allow-Origin: *`.
+  must send `Access-Control-Allow-Origin: *`. Without it the Preview stays empty,
+  with CORS errors in the console.
+- For hosts that can't send that header (a claude.ai Artifact, say), build with
+  `pnpm build:same-origin`. It sets `GRAPHIX_SAME_ORIGIN_PREVIEW=1`, which
+  Parcel inlines at build time to add `allow-same-origin` to the Preview's
+  sandbox, and uses relative URLs so the site works from a subpath. The CSP
+  still stops the Source from running code, but the Preview is no longer
+  isolated from the editor by origin, so never make it the default. The
+  `same-origin` e2e project builds this way and serves it without CORS.
 - `src/preview.html` must stay a separate Parcel entry (`source` in
   `package.json`). Reached through `new URL(..., import.meta.url)` instead,
   Parcel bundles its runtime without ever running it, and the Preview stays

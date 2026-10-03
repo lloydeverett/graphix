@@ -1,11 +1,13 @@
 // Serves a production build the way the README asks hosts to: with CORS, so
-// the Preview's opaque-origin iframe can load its module scripts.
+// the Preview's opaque-origin iframe can load its module scripts. With
+// --no-cors, serves it like a host that can't, for a same-origin Preview build.
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 
-const [dir, port] = process.argv.slice(2);
+const [dir, port, flag] = process.argv.slice(2);
+const cors = flag !== '--no-cors';
 const root = resolve(dir);
 
 const TYPES = {
@@ -37,7 +39,7 @@ createServer(async (request, response) => {
   }
   response.writeHead(200, {
     'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream',
-    'Access-Control-Allow-Origin': '*',
+    ...(cors && { 'Access-Control-Allow-Origin': '*' }),
   });
   createReadStream(file)
     .on('error', () => response.destroy())

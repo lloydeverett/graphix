@@ -10,6 +10,15 @@ import { type SourceMessage, isReadyMessage } from './preview-protocol.js';
  */
 const PREVIEW_URL = new URL('preview.html', document.baseURI);
 
+/**
+ * Built with GRAPHIX_SAME_ORIGIN_PREVIEW=1, the Preview shares the editor's
+ * origin, so its scripts load without CORS, for hosts that can't send
+ * `Access-Control-Allow-Origin: *`. The Preview's CSP still stops the Source
+ * from running code, but the origin no longer keeps it from the editor.
+ */
+const SANDBOX =
+  process.env.GRAPHIX_SAME_ORIGIN_PREVIEW === '1' ? 'allow-scripts allow-same-origin' : 'allow-scripts';
+
 /** crypto.randomUUID needs a secure context; the dev server may be plain HTTP. */
 function newNonce() {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -125,7 +134,7 @@ export class PreviewPane extends LitElement {
         this.nonce,
         html`<iframe
           title="Preview"
-          sandbox="allow-scripts"
+          sandbox=${SANDBOX}
           src=${previewUrl(this.nonce)}
         ></iframe>`,
       )}

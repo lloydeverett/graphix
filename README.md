@@ -22,7 +22,10 @@ needs; nothing in your HTML can reach it.) Edits update the preview in place; **
 
 When hosting the built site, serve the preview's scripts with
 `Access-Control-Allow-Origin: *`: the sandboxed iframe has an opaque origin,
-so its module scripts load as cross-origin requests.
+so its module scripts load as cross-origin requests. If your host can't send
+that header, use `pnpm build:same-origin` instead: the Preview then shares the
+editor's origin. Your HTML still can't run code, but the origin no longer
+separates it from the editor.
 
 ## Setup
 
@@ -38,6 +41,8 @@ pnpm install --frozen-lockfile
 
 - `pnpm dev`: dev server at http://localhost:1234
 - `pnpm build`: static site in `dist/`
+- `pnpm build:same-origin`: the same, for hosts that can't send CORS headers
+  (see above)
 - `pnpm typecheck`: `tsc --noEmit`
 - `pnpm test:e2e`: Playwright end-to-end tests, against both the dev server and
   a production build. The first time, run `pnpm exec playwright install
