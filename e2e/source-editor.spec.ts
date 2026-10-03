@@ -56,3 +56,25 @@ test('undoes edits, and the Preview follows', async ({ editor, page }) => {
   await expect(editor.sourceBox).toHaveText('<p>first</p>');
   await expect(editor.preview.getByText('second')).toHaveCount(0);
 });
+
+test('reports only edits made in the editor, not a value set from outside', async ({ editor, page }) => {
+  const sourceEditor = page.locator('source-editor');
+  await sourceEditor.evaluate((element) => {
+    Object.assign(window, { graphixInputs: 0 });
+    element.addEventListener('source-input', () => {
+      (window as unknown as { graphixInputs: number }).graphixInputs++;
+    });
+  });
+  const inputs = () => page.evaluate(() => (window as unknown as { graphixInputs: number }).graphixInputs);
+
+  await sourceEditor.evaluate((element) => {
+    (element as HTMLElement & { value: string }).value = '<p>from outside</p>';
+  });
+  await expect(editor.sourceBox).toHaveText('<p>from outside</p>');
+  expect(await inputs()).toBe(0);
+
+  await editor.sourceBox.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('!');
+  await expect.poll(inputs).toBe(1);
+});

@@ -52,6 +52,9 @@ export class SourceEditor extends LitElement {
 
   #view?: EditorView;
 
+  /** Set while `updated()` applies an outside `value`, which isn't an edit to report. */
+  #applyingValue = false;
+
   protected createRenderRoot() {
     return this;
   }
@@ -68,7 +71,7 @@ export class SourceEditor extends LitElement {
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({ 'aria-label': 'HTML source', spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
-          if (!update.docChanged) return;
+          if (!update.docChanged || this.#applyingValue) return;
           this.value = update.state.doc.toString();
           this.dispatchEvent(new Event('source-input'));
         }),
@@ -87,7 +90,13 @@ export class SourceEditor extends LitElement {
     // Edits made in the editor already match; only outside changes replace it.
     const view = this.#view;
     if (changed.has('value') && view && this.value !== view.state.doc.toString()) {
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: this.value } });
+      // dispatch runs the update listener synchronously, before this returns.
+      this.#applyingValue = true;
+      try {
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: this.value } });
+      } finally {
+        this.#applyingValue = false;
+      }
     }
   }
 }
