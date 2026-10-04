@@ -62,20 +62,12 @@ export class GraphixApp extends LitElement {
     source-editor {
       display: block;
     }
-
-    /* Stacked, the Source starts with 40% of the height. */
-    split-pane[orientation='vertical'] > source-editor {
-      flex-grow: 2;
-    }
-
-    split-pane[orientation='vertical'] > preview-pane {
-      flex-grow: 3;
-    }
   `;
 
   /** The Source as typed. */
   @state() source = loadSource();
 
+  /** Whether the screen is narrow enough to stack the Source above the Preview. */
   @state() narrow = narrowScreen.matches;
 
   #onScreenChange = () => {
