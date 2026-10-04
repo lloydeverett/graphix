@@ -19,6 +19,9 @@ The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and
 plugins are all blocked. (`pnpm dev` allows `eval`, which Parcel's hot reloading
 needs; nothing in your HTML can reach it.) Edits update the preview in place; **Refresh** rebuilds it from scratch.
+The menu beside Refresh picks the preview's base stylesheet, from the classless
+ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
+`src/base-styles/README.md` lists their sources and licenses.
 
 When hosting the built site, serve the preview's scripts with
 `Access-Control-Allow-Origin: *`: the sandboxed iframe has an opaque origin,

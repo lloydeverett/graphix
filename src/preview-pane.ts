@@ -1,7 +1,8 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
-import { type SourceMessage, isReadyMessage } from './preview-protocol.js';
+import { BASE_STYLES, type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
+import { type BaseStyleMessage, type SourceMessage, isReadyMessage } from './preview-protocol.js';
 
 /**
  * preview.html is its own Parcel entry, served beside the editor. Reached via
@@ -28,17 +29,22 @@ function newNonce() {
 /**
  * The query string carries the nonce: unlike the iframe's name, it doesn't
  * follow the iframe to another page, and unlike the hash, in-page links
- * don't change it.
+ * don't change it. It carries the starting Base Style too, so the Preview
+ * can load it before the editor connects.
  */
-function previewUrl(nonce: string) {
+function previewUrl(nonce: string, baseStyle: BaseStyleId) {
   const url = new URL(PREVIEW_URL);
   url.searchParams.set('nonce', nonce);
+  url.searchParams.set('base-style', baseStyle);
   return url.href;
 }
 
 /**
  * Shows a Source as a Preview: the HTML rendered in a sandboxed iframe, which
  * is updated in place as the Source changes and rebuilt only on Refresh.
+ * Choosing a Base Style restyles it in place too.
+ *
+ * @fires base-style-change - when the user chooses a Base Style; `baseStyle` is the new one.
  */
 @customElement('preview-pane')
 export class PreviewPane extends LitElement {
@@ -52,12 +58,14 @@ export class PreviewPane extends LitElement {
     header {
       display: flex;
       justify-content: flex-end;
+      gap: 6px;
       padding: 4px 8px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
     }
 
-    button {
+    button,
+    select {
       padding: 2px 10px;
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -77,8 +85,16 @@ export class PreviewPane extends LitElement {
 
   @property() source = '';
 
+  @property() baseStyle: BaseStyleId = DEFAULT_BASE_STYLE;
+
   /** Identifies the current iframe; a new one gets a new nonce. */
   @state() nonce = newNonce();
+
+  /**
+   * The current iframe's URL. Fixed when the iframe is made, so choosing a
+   * Base Style doesn't navigate it.
+   */
+  #src = '';
 
   /** Connects to the current iframe's runtime once it reports ready. */
   #port?: MessagePort;
@@ -111,21 +127,53 @@ export class PreviewPane extends LitElement {
     // If the iframe loads our page again, it sends a new port; the old one is dead.
     this.#port?.close();
     this.#port = port;
-    this.#send();
+    this.#sendBaseStyle();
+    this.#sendSource();
   };
 
-  #send() {
+  #sendSource() {
     const message: SourceMessage = { type: 'graphix:source', source: this.source };
     this.#port?.postMessage(message);
   }
 
+  #sendBaseStyle() {
+    const message: BaseStyleMessage = { type: 'graphix:base-style', baseStyle: this.baseStyle };
+    this.#port?.postMessage(message);
+  }
+
+  #onBaseStyleChange(event: Event) {
+    const { value } = event.target as HTMLSelectElement;
+    if (!isBaseStyleId(value)) return;
+    this.baseStyle = value;
+    this.dispatchEvent(new Event('base-style-change'));
+  }
+
+  protected willUpdate(changed: Map<PropertyKey, unknown>) {
+    if (changed.has('nonce')) this.#src = previewUrl(this.nonce, this.baseStyle);
+  }
+
   protected updated(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('source')) this.#send();
+    if (changed.has('baseStyle')) {
+      // Set after the options render; on the <select> in the template, it can come before them.
+      this.renderRoot.querySelector('select')!.value = this.baseStyle;
+      this.#sendBaseStyle();
+    }
+    if (changed.has('source')) this.#sendSource();
   }
 
   render() {
     return html`
       <header>
+        <select
+          aria-label="Base style"
+          title="The stylesheet the Preview starts from"
+          @change=${this.#onBaseStyleChange}
+        >
+          ${BASE_STYLES.map(
+            ({ id, label }) =>
+              html`<option value=${id}>${label}</option>`,
+          )}
+        </select>
         <button type="button" title="Rebuild the Preview from scratch" @click=${this.refresh}>
           Refresh
         </button>
@@ -135,7 +183,7 @@ export class PreviewPane extends LitElement {
         html`<iframe
           title="Preview"
           sandbox=${SANDBOX}
-          src=${previewUrl(this.nonce)}
+          src=${this.#src}
         ></iframe>`,
       )}
     `;

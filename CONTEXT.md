@@ -16,6 +16,10 @@ _Avoid_: output, live view, render
 Throwing away the Preview's iframe and building it afresh from the current Source, clearing any state left behind by earlier edits.
 _Avoid_: reload, reset
 
+**Base Style**:
+The stylesheet the Preview starts from, before any styles in the Source: graphix's own, the browser's defaults ("HTML only"), or one of the classless stylesheets bundled from cssbed.com. Changing it restyles the Preview in place.
+_Avoid_: theme, skin
+
 **Diagram**:
 A `<gx-mermaid>` element in the Source, drawn from the Mermaid text inside it.
 _Avoid_: chart, graph

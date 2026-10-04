@@ -104,10 +104,11 @@ export class GxMermaid extends LitElement {
     .error {
       margin: 0 0 12px;
       padding: 8px 12px;
-      border: 1px solid var(--error-border);
+      /* The graphix Base Style sets these; other Base Styles don't. */
+      border: 1px solid var(--error-border, #ff8182);
       border-radius: 6px;
-      background: var(--error-bg);
-      color: var(--error-fg);
+      background: var(--error-bg, #ffebe9);
+      color: var(--error-fg, #82071e);
       font: 13px/1.4 ui-monospace, monospace;
       white-space: pre-wrap;
     }

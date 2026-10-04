@@ -61,5 +61,14 @@ editor or the Preview; tests that expect some declare them with
   (except when zoomed), and `html` and `body` never scroll. Emulation has no
   on-screen keyboard; `e2e/mobile.spec.ts` fakes `visualViewport` instead, and
   only a real iPhone shows whether it works.
+- Parcel's cache can keep a stale copy of an edited module, so a production
+  build (and the `prod` and `same-origin` e2e projects) runs old code while
+  `dev` runs the new. If they disagree for no reason, `rm -rf .playwright`
+  and run the tests again.
+- Base Styles are copied into `src/base-styles/` and referenced with
+  `new URL(..., import.meta.url)`, so the built site never fetches them from
+  elsewhere; keep it that way when adding one (see that folder's README).
+  (Parcel's `url:` imports work too, but its CSS optimizer warns about them
+  as if they were CSS modules.)
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.

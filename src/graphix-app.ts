@@ -4,9 +4,12 @@ import './preview-pane.js';
 // Parcel drops a type-only import entirely, so import for the side effect too.
 import './source-editor.js';
 import './split-pane.js';
+import { type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
+import type { PreviewPane } from './preview-pane.js';
 import type { SourceEditor } from './source-editor.js';
 
-const STORAGE_KEY = 'graphix:source';
+const SOURCE_STORAGE_KEY = 'graphix:source';
+const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
 
 /** Below this width the Source is stacked above the Preview. */
 const narrowScreen = matchMedia('(max-width: 720px)');
@@ -24,7 +27,7 @@ const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
 
 function loadSource(): string {
   try {
-    return localStorage.getItem(STORAGE_KEY) ?? EXAMPLE_SOURCE;
+    return localStorage.getItem(SOURCE_STORAGE_KEY) ?? EXAMPLE_SOURCE;
   } catch {
     return EXAMPLE_SOURCE;
   }
@@ -32,9 +35,26 @@ function loadSource(): string {
 
 function saveSource(source: string) {
   try {
-    localStorage.setItem(STORAGE_KEY, source);
+    localStorage.setItem(SOURCE_STORAGE_KEY, source);
   } catch {
     // Storage unavailable (e.g. private mode); the Source just won't persist.
+  }
+}
+
+function loadBaseStyle(): BaseStyleId {
+  try {
+    const saved = localStorage.getItem(BASE_STYLE_STORAGE_KEY);
+    return isBaseStyleId(saved) ? saved : DEFAULT_BASE_STYLE;
+  } catch {
+    return DEFAULT_BASE_STYLE;
+  }
+}
+
+function saveBaseStyle(baseStyle: BaseStyleId) {
+  try {
+    localStorage.setItem(BASE_STYLE_STORAGE_KEY, baseStyle);
+  } catch {
+    // Storage unavailable; the Base Style just won't persist.
   }
 }
 
@@ -72,6 +92,9 @@ export class GraphixApp extends LitElement {
 
   /** The Source as typed. */
   @state() source = loadSource();
+
+  /** The Base Style the Preview is shown with. */
+  @state() baseStyle = loadBaseStyle();
 
   /** Whether the screen is narrow enough to stack the Source above the Preview. */
   @state() narrow = narrowScreen.matches;
@@ -114,12 +137,21 @@ export class GraphixApp extends LitElement {
     saveSource(this.source);
   }
 
+  #onBaseStyleChange(event: Event) {
+    this.baseStyle = (event.target as PreviewPane).baseStyle;
+    saveBaseStyle(this.baseStyle);
+  }
+
   render() {
     return html`
       <split-pane orientation=${this.narrow ? 'vertical' : 'horizontal'}>
         <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
         <split-divider aria-label="Resize the Source and Preview"></split-divider>
-        <preview-pane .source=${this.source}></preview-pane>
+        <preview-pane
+          .source=${this.source}
+          .baseStyle=${this.baseStyle}
+          @base-style-change=${this.#onBaseStyleChange}
+        ></preview-pane>
       </split-pane>
     `;
   }
