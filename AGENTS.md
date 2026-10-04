@@ -50,5 +50,10 @@ editor or the Preview; tests that expect some declare them with
   `@media` inside `EditorView.theme` didn't take effect. The editor's text
   stays at least 16px on touch screens, or mobile browsers zoom in when it's
   focused.
+- `src/split-pane.ts` (`<split-pane>`, `<split-divider>`) has no shadow root
+  either; it adds its styles to the root it's placed in. The consumer lays out
+  the children and puts a `<split-divider>` between two of them. While
+  dragging, panes get `pointer-events: none`, or the Preview's iframe would
+  take the pointer.
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.

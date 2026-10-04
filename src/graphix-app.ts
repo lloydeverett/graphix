@@ -3,9 +3,13 @@ import { customElement, state } from 'lit/decorators.js';
 import './preview-pane.js';
 // Parcel drops a type-only import entirely, so import for the side effect too.
 import './source-editor.js';
+import './split-pane.js';
 import type { SourceEditor } from './source-editor.js';
 
 const STORAGE_KEY = 'graphix:source';
+
+/** Below this width the Source is stacked above the Preview. */
+const narrowScreen = matchMedia('(max-width: 720px)');
 
 const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
 <p>Write HTML on the left. Wrap Mermaid in <code>&lt;gx-mermaid&gt;</code> to draw a diagram.</p>
@@ -38,35 +42,50 @@ function saveSource(source: string) {
 export class GraphixApp extends LitElement {
   static styles = css`
     :host {
-      display: grid;
-      /* minmax(0, …) keeps long content from widening its track. */
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      display: block;
       /* On mobile, vh counts the space behind the browser's toolbars; dvh doesn't. */
       height: 100vh;
       height: 100dvh;
     }
 
-    source-editor {
-      display: block;
-      min-height: 0;
-      border-right: 1px solid var(--border);
+    split-pane {
+      height: 100%;
+      --split-divider-color: var(--border);
+      --split-divider-active-color: var(--syntax-attribute);
     }
 
-    @media (max-width: 720px) {
-      :host {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
-      }
+    source-editor {
+      display: block;
+    }
 
-      source-editor {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
+    /* Stacked, the Source starts with 40% of the height. */
+    split-pane[orientation='vertical'] > source-editor {
+      flex-grow: 2;
+    }
+
+    split-pane[orientation='vertical'] > preview-pane {
+      flex-grow: 3;
     }
   `;
 
   /** The Source as typed. */
   @state() source = loadSource();
+
+  @state() narrow = narrowScreen.matches;
+
+  #onScreenChange = () => {
+    this.narrow = narrowScreen.matches;
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    narrowScreen.addEventListener('change', this.#onScreenChange);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    narrowScreen.removeEventListener('change', this.#onScreenChange);
+  }
 
   #onInput(event: Event) {
     this.source = (event.target as SourceEditor).value;
@@ -75,8 +94,11 @@ export class GraphixApp extends LitElement {
 
   render() {
     return html`
-      <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
-      <preview-pane .source=${this.source}></preview-pane>
+      <split-pane orientation=${this.narrow ? 'vertical' : 'horizontal'}>
+        <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
+        <split-divider aria-label="Resize the Source and Preview"></split-divider>
+        <preview-pane .source=${this.source}></preview-pane>
+      </split-pane>
     `;
   }
 }
