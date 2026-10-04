@@ -10,6 +10,54 @@ function tokenColor(page: Page, text: string) {
     .evaluate((element) => getComputedStyle(element).color);
 }
 
+type Rgba = [r: number, g: number, b: number, a: number];
+
+function parseColor(color: string): Rgba {
+  const [r = 0, g = 0, b = 0, a = 1] = color.match(/[\d.]+/g)!.map(Number);
+  return [r, g, b, a];
+}
+
+/** Paints each layer over the one before, as the browser does; the first must be opaque. */
+function composite(...layers: string[]): Rgba {
+  return layers.map(parseColor).reduce((below, above) => {
+    const alpha = above[3];
+    const mix = (i: number) => below[i]! * (1 - alpha) + above[i]! * alpha;
+    return [mix(0), mix(1), mix(2), 1];
+  });
+}
+
+/** WCAG contrast ratio between two opaque colours. */
+function contrast(first: Rgba, second: Rgba) {
+  const luminance = ([red, green, blue]: Rgba) => {
+    const [r, g, b] = [red, green, blue].map((channel) => {
+      const c = channel / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const [lighter, darker] = [luminance(first), luminance(second)].sort((x, y) => y - x);
+  return (lighter! + 0.05) / (darker! + 0.05);
+}
+
+/** Every colour text in the Source can have. */
+const TEXT_COLORS = [
+  '--fg',
+  '--syntax-tag',
+  '--syntax-attribute',
+  '--syntax-string',
+  '--syntax-comment',
+  '--syntax-keyword',
+  '--error-fg',
+];
+
+/** The computed background of the first element in the Source editor matching `selector`. */
+function background(page: Page, selector: string) {
+  return page
+    .locator(`source-editor ${selector}`)
+    .first()
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+}
+
 test('is a CodeMirror editor labelled for assistive technology', async ({ editor }) => {
   await expect(editor.sourceBox).toHaveRole('textbox');
   await expect(editor.sourceBox).toHaveAttribute('contenteditable', 'true');
@@ -79,38 +127,68 @@ test('reports only edits made in the editor, not a value set from outside', asyn
   await expect.poll(inputs).toBe(1);
 });
 
-/** WCAG contrast ratio between two computed `rgb(...)` colours. */
-function contrast(a: string, b: string) {
-  const luminance = (color: string) => {
-    const [r, g, b] = color.match(/[\d.]+/g)!.slice(0, 3).map((channel) => {
-      const c = Number(channel) / 255;
-      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
-  };
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (light! + 0.05) / (dark! + 0.05);
-}
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test(`keeps selected text readable in the ${colorScheme} theme`, async ({ editor, page }) => {
+  test(`keeps text readable on every highlight in the ${colorScheme} theme`, async ({ editor, page }) => {
     await page.emulateMedia({ colorScheme });
-    await editor.setSource('<a href="https://example.com">link</a><!-- note -->');
+    await editor.setSource('<p>word</p>\n<p>word</p>');
+    const textColors = await page.evaluate(
+      (names) =>
+        names.map((name) => {
+          const probe = document.body.appendChild(document.createElement('span'));
+          probe.style.color = `var(${name})`;
+          const color = getComputedStyle(probe).color;
+          probe.remove();
+          return color;
+        }),
+      TEXT_COLORS,
+    );
+
+    // Selects the first `word`, which highlights the second as a match.
+    await page.locator('source-editor .cm-line').first().getByText('word').dblclick();
+    const surface = await background(page, '.cm-editor');
+    const activeLine = await background(page, '.cm-activeLine');
+    const selection = await background(page, '.cm-selectionBackground');
+    const selectionMatch = await background(page, '.cm-selectionMatch');
+    await editor.sourceBox.blur();
+    const unfocusedSelection = await background(page, '.cm-selectionBackground');
+
     await editor.sourceBox.click();
-    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('ControlOrMeta+f');
+    await page.keyboard.type('word');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('source-editor .cm-searchMatch-selected')).toHaveCount(1);
+    const searchMatch = await background(page, '.cm-searchMatch:not(.cm-searchMatch-selected)');
+    const selectedSearchMatch = await background(page, '.cm-searchMatch-selected');
 
-    const selection = page.locator('source-editor .cm-selectionBackground').first();
-    const textColors = await page
-      .locator('source-editor .cm-content, source-editor .cm-line span')
-      .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color));
-    const background = () => selection.evaluate((element) => getComputedStyle(element).backgroundColor);
-
-    for (const focused of [true, false]) {
-      if (!focused) await editor.sourceBox.blur();
-      const selected = await background();
-      for (const color of textColors) {
-        expect(contrast(color, selected), `${color} on ${selected}, focused: ${focused}`).toBeGreaterThanOrEqual(4.5);
+    // The selection layer lies under the lines, and marks on text lie over them.
+    const highlights: Record<string, Rgba> = {
+      selection: composite(surface, selection),
+      'selection on the active line': composite(surface, selection, activeLine),
+      'unfocused selection on the active line': composite(surface, unfocusedSelection, activeLine),
+      'selection match': composite(surface, selectionMatch),
+      'selection match on the active line': composite(surface, activeLine, selectionMatch),
+      'search match': composite(surface, searchMatch),
+      'search match on the active line': composite(surface, activeLine, searchMatch),
+      'selected search match': composite(surface, selection, activeLine, selectedSearchMatch),
+    };
+    for (const [name, highlight] of Object.entries(highlights)) {
+      for (const [i, color] of textColors.entries()) {
+        const ratio = contrast(parseColor(color), highlight);
+        expect(ratio, `${TEXT_COLORS[i]} on ${name}`).toBeGreaterThanOrEqual(4.5);
       }
+    }
+
+    // And each highlight shows against what's beneath it.
+    const plain = composite(surface);
+    const visible: [string, Rgba, Rgba][] = [
+      ['selection', highlights.selection!, plain],
+      ['selection on the active line', highlights['selection on the active line']!, composite(surface, activeLine)],
+      ['selection match', highlights['selection match']!, plain],
+      ['search match', highlights['search match']!, plain],
+    ];
+    for (const [name, highlight, beneath] of visible) {
+      expect(contrast(highlight, beneath), `${name} shows`).toBeGreaterThanOrEqual(1.15);
     }
   });
 }

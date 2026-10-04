@@ -37,6 +37,13 @@ const theme = EditorView.theme({
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground': {
     background: 'var(--selection)',
   },
+  '.cm-selectionMatch': { background: 'var(--selection-match)' },
+  '.cm-searchMatch': { background: 'var(--search-match)' },
+  // The selected match is the selection too, so let the selection show through.
+  '.cm-searchMatch.cm-searchMatch-selected': {
+    background: 'transparent',
+    outline: '1px solid var(--search-match-outline)',
+  },
   '.cm-matchingBracket': { background: 'var(--selection)', outline: 'none' },
 });
 
