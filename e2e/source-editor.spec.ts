@@ -78,3 +78,39 @@ test('reports only edits made in the editor, not a value set from outside', asyn
   await page.keyboard.type('!');
   await expect.poll(inputs).toBe(1);
 });
+
+/** WCAG contrast ratio between two computed `rgb(...)` colours. */
+function contrast(a: string, b: string) {
+  const luminance = (color: string) => {
+    const [r, g, b] = color.match(/[\d.]+/g)!.slice(0, 3).map((channel) => {
+      const c = Number(channel) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light! + 0.05) / (dark! + 0.05);
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`keeps selected text readable in the ${colorScheme} theme`, async ({ editor, page }) => {
+    await page.emulateMedia({ colorScheme });
+    await editor.setSource('<a href="https://example.com">link</a><!-- note -->');
+    await editor.sourceBox.click();
+    await page.keyboard.press('ControlOrMeta+a');
+
+    const selection = page.locator('source-editor .cm-selectionBackground').first();
+    const textColors = await page
+      .locator('source-editor .cm-content, source-editor .cm-line span')
+      .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color));
+    const background = () => selection.evaluate((element) => getComputedStyle(element).backgroundColor);
+
+    for (const focused of [true, false]) {
+      if (!focused) await editor.sourceBox.blur();
+      const selected = await background();
+      for (const color of textColors) {
+        expect(contrast(color, selected), `${color} on ${selected}, focused: ${focused}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+}

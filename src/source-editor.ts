@@ -33,7 +33,8 @@ const theme = EditorView.theme({
     border: 'none',
   },
   '.cm-activeLine, .cm-activeLineGutter': { background: 'var(--active-line)' },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+  // As specific as CodeMirror's own rule for a focused selection, or it wins.
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground': {
     background: 'var(--selection)',
   },
   '.cm-matchingBracket': { background: 'var(--selection)', outline: 'none' },
