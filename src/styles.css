@@ -7,4 +7,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, sans-serif;
+  /* The panes scroll; the page itself never should. */
+  overflow: hidden;
+  overscroll-behavior: none;
 }

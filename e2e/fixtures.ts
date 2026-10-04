@@ -62,7 +62,8 @@ export const test = base.extend<Fixtures>({
   },
 
   editor: async ({ page }, use) => {
-    await page.goto('/');
+    // Relative, so a baseURL with a subpath keeps it.
+    await page.goto('./');
     await use(new Editor(page));
   },
 });

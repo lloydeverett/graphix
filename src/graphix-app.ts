@@ -1,8 +1,15 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import './preview-pane.js';
+// Parcel drops a type-only import entirely, so import for the side effect too.
+import './source-editor.js';
+import './split-pane.js';
+import type { SourceEditor } from './source-editor.js';
 
 const STORAGE_KEY = 'graphix:source';
+
+/** Below this width the Source is stacked above the Preview. */
+const narrowScreen = matchMedia('(max-width: 720px)');
 
 const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
 <p>Write HTML on the left. Wrap Mermaid in <code>&lt;gx-mermaid&gt;</code> to draw a diagram.</p>
@@ -35,57 +42,79 @@ function saveSource(source: string) {
 export class GraphixApp extends LitElement {
   static styles = css`
     :host {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: block;
+      /* Fixed, so it can follow the visible area; see #fitToVisibleArea. */
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      /* On mobile, vh counts the space behind the browser's toolbars; dvh doesn't. */
       height: 100vh;
+      height: 100dvh;
     }
 
-    textarea {
-      box-sizing: border-box;
-      width: 100%;
+    split-pane {
       height: 100%;
-      margin: 0;
-      padding: 16px;
-      border: none;
-      border-right: 1px solid var(--border);
-      outline: none;
-      resize: none;
-      background: var(--surface);
-      color: var(--fg);
-      font: 14px/1.5 ui-monospace, monospace;
-      tab-size: 4;
+      --split-divider-color: var(--border);
+      --split-divider-active-color: var(--syntax-attribute);
     }
 
-    @media (max-width: 720px) {
-      :host {
-        grid-template-columns: 1fr;
-        grid-template-rows: 40vh 1fr;
-      }
-
-      textarea {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
+    source-editor {
+      display: block;
     }
   `;
 
   /** The Source as typed. */
   @state() source = loadSource();
 
-  #onInput(event: InputEvent) {
-    this.source = (event.target as HTMLTextAreaElement).value;
+  /** Whether the screen is narrow enough to stack the Source above the Preview. */
+  @state() narrow = narrowScreen.matches;
+
+  #onScreenChange = () => {
+    this.narrow = narrowScreen.matches;
+  };
+
+  /**
+   * iOS doesn't resize the page for its on-screen keyboard: the keyboard covers
+   * the page, and Safari slides the whole page up to keep the cursor in view.
+   * So fit the app to the part that's visible and keep it there, and only the
+   * panes scroll. Zoomed in, the app keeps its size, so zooming still works.
+   */
+  #fitToVisibleArea = () => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const zoomed = Math.abs(viewport.scale - 1) > 0.01;
+    this.style.height = zoomed ? '' : `${viewport.height}px`;
+    this.style.transform = zoomed ? '' : `translateY(${viewport.offsetTop}px)`;
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    narrowScreen.addEventListener('change', this.#onScreenChange);
+    window.visualViewport?.addEventListener('resize', this.#fitToVisibleArea);
+    window.visualViewport?.addEventListener('scroll', this.#fitToVisibleArea);
+    this.#fitToVisibleArea();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    narrowScreen.removeEventListener('change', this.#onScreenChange);
+    window.visualViewport?.removeEventListener('resize', this.#fitToVisibleArea);
+    window.visualViewport?.removeEventListener('scroll', this.#fitToVisibleArea);
+  }
+
+  #onInput(event: Event) {
+    this.source = (event.target as SourceEditor).value;
     saveSource(this.source);
   }
 
   render() {
     return html`
-      <textarea
-        aria-label="HTML source"
-        spellcheck="false"
-        .value=${this.source}
-        @input=${this.#onInput}
-      ></textarea>
-      <preview-pane .source=${this.source}></preview-pane>
+      <split-pane orientation=${this.narrow ? 'vertical' : 'horizontal'}>
+        <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
+        <split-divider aria-label="Resize the Source and Preview"></split-divider>
+        <preview-pane .source=${this.source}></preview-pane>
+      </split-pane>
     `;
   }
 }
