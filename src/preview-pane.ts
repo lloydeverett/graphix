@@ -1,6 +1,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
+import { RefreshCw, createElement } from 'lucide';
 import { BASE_STYLES, type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import { type BaseStyleMessage, type SourceMessage, isReadyMessage } from './preview-protocol.js';
 
@@ -76,6 +77,12 @@ export class PreviewPane extends LitElement {
       cursor: pointer;
     }
 
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+    }
+
     iframe {
       flex: 1;
       width: 100%;
@@ -95,6 +102,9 @@ export class PreviewPane extends LitElement {
    * Base Style doesn't navigate it.
    */
   #src = '';
+
+  /** Made once, so each render reuses the same node. */
+  #refreshIcon = createElement(RefreshCw, { width: 16, height: 16, 'aria-hidden': 'true' });
 
   /** Connects to the current iframe's runtime once it reports ready. */
   #port?: MessagePort;
@@ -174,8 +184,14 @@ export class PreviewPane extends LitElement {
               html`<option value=${id}>${label}</option>`,
           )}
         </select>
-        <button type="button" title="Rebuild the Preview from scratch" @click=${this.refresh}>
-          Refresh
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="Refresh"
+          title="Refresh: rebuild the Preview from scratch"
+          @click=${this.refresh}
+        >
+          ${this.#refreshIcon}
         </button>
       </header>
       ${keyed(

@@ -50,6 +50,13 @@ test('Refresh rebuilds the Preview from scratch', async ({ editor, page }) => {
   await expect(editor.preview.getByText('fresh')).toBeVisible();
 });
 
+test('Refresh is an icon button', async ({ editor, page }) => {
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  const refresh = page.getByRole('button', { name: 'Refresh' });
+  await expect(refresh.locator('svg')).toBeVisible();
+  await expect(refresh).toHaveText('');
+});
+
 test("the Preview can't reach the editor, unless built same-origin", async ({ editor }, testInfo) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
   const reach = await editor.inPreview(() => {
