@@ -72,6 +72,35 @@ test('keeps both panes usable as the window shrinks', async ({ editor, page }) =
   expect(await previewSize(page, 'width')).toBeCloseTo(240, 0);
 });
 
+test('keeps the split when the page is opened again', async ({ editor, page }) => {
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  await dragDivider(page, 200, 0);
+  const width = await editorSize(page, 'width');
+  const share = await divider(page).getAttribute('aria-valuenow');
+
+  await page.reload();
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  await expect(divider(page)).toHaveAttribute('aria-valuenow', share!);
+  expect(Math.abs((await editorSize(page, 'width')) - width)).toBeLessThan(2);
+
+  // Keyboard changes are kept too.
+  await divider(page).focus();
+  await page.keyboard.press('ArrowLeft');
+  const afterKey = (await divider(page).getAttribute('aria-valuenow'))!;
+  await page.reload();
+  await expect(divider(page)).toHaveAttribute('aria-valuenow', afterKey);
+});
+
+test('ignores a saved split that does not fit', async ({ editor, page }) => {
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  for (const saved of ['[10, 20, 70]', '["a", "b"]', 'not json']) {
+    await page.evaluate((value) => localStorage.setItem('graphix:split', value), saved);
+    await page.reload();
+    await expect(editor.preview.locator('h1')).toBeVisible();
+    await expect(divider(page)).toHaveAttribute('aria-valuenow', '50');
+  }
+});
+
 test('resizes from the keyboard', async ({ editor, page }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
   const before = await editorSize(page, 'width');
@@ -100,6 +129,16 @@ test.describe('on a narrow screen', () => {
     await divider(page).focus();
     await page.keyboard.press('ArrowUp');
     expect(await editorSize(page, 'height')).toBeLessThan(before + 100);
+  });
+
+  test('keeps the split when the page is opened again', async ({ editor, page }) => {
+    await expect(editor.preview.locator('h1')).toBeVisible();
+    await dragDivider(page, 0, 100);
+    const height = await editorSize(page, 'height');
+
+    await page.reload();
+    await expect(editor.preview.locator('h1')).toBeVisible();
+    expect(Math.abs((await editorSize(page, 'height')) - height)).toBeLessThan(2);
   });
 
   test('keeps both panes usable however far the divider is dragged', async ({ editor, page }) => {

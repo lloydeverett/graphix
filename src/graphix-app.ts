@@ -144,7 +144,10 @@ export class GraphixApp extends LitElement {
 
   render() {
     return html`
-      <split-pane orientation=${this.narrow ? 'vertical' : 'horizontal'}>
+      <split-pane
+        orientation=${this.narrow ? 'vertical' : 'horizontal'}
+        storage-key="graphix:split"
+      >
         <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
         <split-divider aria-label="Resize the Source and Preview"></split-divider>
         <preview-pane

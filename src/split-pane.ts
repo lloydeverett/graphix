@@ -122,11 +122,15 @@ const flexGrow = (element: Element) => parseFloat(getComputedStyle(element).flex
  * children to let the user resize them; the children are the consumer's to
  * manage. A child's starting share can be set with CSS `flex-grow`, and the
  * smallest a child may be along the split with `--split-pane-min-size` (40px
- * by default, and never more than half the split-pane).
+ * by default, and never more than half the split-pane). Give it a
+ * `storage-key` to keep the children's shares in localStorage under that key.
  */
 @customElement('split-pane')
 export class SplitPane extends LitElement {
   @property({ reflect: true }) orientation: 'horizontal' | 'vertical' = 'horizontal';
+
+  /** Where in localStorage to keep the children's shares, if anywhere. */
+  @property({ attribute: 'storage-key' }) storageKey?: string;
 
   protected createRenderRoot() {
     return this;
@@ -135,6 +139,45 @@ export class SplitPane extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     adoptStyles(this);
+  }
+
+  get #panes() {
+    return [...this.children].filter(
+      (child): child is HTMLElement => child instanceof HTMLElement && !(child instanceof SplitDivider),
+    );
+  }
+
+  /** Saves each child's share of the space, as a percentage, under `storageKey`. */
+  saveSizes() {
+    if (!this.storageKey) return;
+    const grows = this.#panes.map(flexGrow);
+    const total = grows.reduce((sum, grow) => sum + grow, 0);
+    if (total <= 0) return;
+    const percentages = grows.map((grow) => Math.round((grow / total) * 10000) / 100);
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(percentages));
+    } catch {
+      // Storage unavailable; the sizes just won't persist.
+    }
+  }
+
+  /** Restores the shares saved under `storageKey`, if they fit the children. */
+  #loadSizes() {
+    if (!this.storageKey) return;
+    let saved: unknown;
+    try {
+      saved = JSON.parse(localStorage.getItem(this.storageKey) ?? 'null');
+    } catch {
+      return;
+    }
+    const panes = this.#panes;
+    if (!Array.isArray(saved) || saved.length !== panes.length) return;
+    if (!saved.every((percentage) => typeof percentage === 'number' && percentage > 0)) return;
+    panes.forEach((pane, i) => (pane.style.flexGrow = String(saved[i])));
+  }
+
+  protected firstUpdated() {
+    this.#loadSizes();
   }
 
   protected updated() {
@@ -251,7 +294,12 @@ export class SplitDivider extends LitElement {
 
   #onPointerEnd = () => {
     this.parentElement?.removeAttribute('resizing');
+    this.#saveSizes();
   };
+
+  #saveSizes() {
+    if (this.parentElement instanceof SplitPane) this.parentElement.saveSizes();
+  }
 
   #onKeyDown = (event: KeyboardEvent) => {
     const panes = this.#panes;
@@ -262,6 +310,7 @@ export class SplitDivider extends LitElement {
     event.preventDefault();
     const { size, combined } = this.#measure(panes);
     this.#resizeTo(size + direction * KEYBOARD_STEP * combined);
+    this.#saveSizes();
   };
 }
 
