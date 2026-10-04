@@ -15,6 +15,23 @@ Mermaid that looks like HTML must be escaped: write `&lt;&lt;interface&gt;&gt;`
 for `<<interface>>`, `A[one&lt;br&gt;two]` for `A[one<br>two]`, and `&amp;` for
 a literal `&`.
 
+Nest `<gx-tree-node>` elements to draw a tree, laid out as a Mermaid
+flowchart would be (by [ELK](https://github.com/kieler/elkjs)):
+
+```html
+<gx-tree-node label="Root">
+  <gx-tree-node label="Child A"></gx-tree-node>
+  <gx-tree-node label="Child B"><a href="#b">more</a></gx-tree-node>
+</gx-tree-node>
+```
+
+Each node shows its `label` and any other content, which stays real HTML: links
+work, and your CSS can style it. Style the boxes themselves with
+`gx-tree-node::part(card)` and their labels with `::part(label)`; set
+`--gx-tree-edge-color` for the edges and `--gx-tree-node-max-width` (16em by
+default) for where long content wraps. Set `direction="right"` (or `up`, `left`) on the
+outermost node to grow the tree another way.
+
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and
 plugins are all blocked. (`pnpm dev` allows `eval`, which Parcel's hot reloading

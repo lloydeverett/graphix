@@ -178,6 +178,9 @@ importers:
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
+      elkjs:
+        specifier: ^0.9.3
+        version: 0.9.3
       lit:
         specifier: ^3.3.3
         version: 3.3.3

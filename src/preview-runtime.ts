@@ -2,6 +2,7 @@ import { BASE_STYLE_SHEETS } from './base-style-sheets.js';
 import { type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import './block-source-scripts.js';
 import './gx-mermaid.js';
+import './gx-tree-node.js';
 import { morphChildren } from './morph.js';
 import { type ReadyMessage, isBaseStyleMessage, isSourceMessage } from './preview-protocol.js';
 

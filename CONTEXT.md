@@ -1,6 +1,6 @@
 # graphix
 
-A browser-only live HTML editor: you type HTML Source on one side and see its Preview on the other. A `<gx-mermaid>` element in the Source draws its contents as a Mermaid diagram.
+A browser-only live HTML editor: you type HTML Source on one side and see its Preview on the other. A `<gx-mermaid>` element in the Source draws its contents as a Mermaid diagram, and nested `<gx-tree-node>` elements draw a Tree.
 
 ## Language
 
@@ -23,6 +23,14 @@ _Avoid_: theme, skin
 **Diagram**:
 A `<gx-mermaid>` element in the Source, drawn from the Mermaid text inside it.
 _Avoid_: chart, graph
+
+**Tree**:
+An outermost `<gx-tree-node>` in the Source, with the Tree Nodes nested in it, laid out as a node-link diagram. Unlike a Diagram, its nodes stay real elements in the Preview.
+_Avoid_: graph, org chart
+
+**Tree Node**:
+A `<gx-tree-node>`: a box showing its label and content, joined by edges to the Tree Nodes nested directly inside it.
+_Avoid_: vertex, item
 
 **Render Error**:
 The failure shown on a Diagram whose Mermaid text can't be parsed or rendered; while it's shown, the Diagram keeps its last successful drawing.
