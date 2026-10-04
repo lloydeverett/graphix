@@ -55,5 +55,11 @@ editor or the Preview; tests that expect some declare them with
   the children and puts a `<split-divider>` between two of them. While
   dragging, panes get `pointer-events: none`, or the Preview's iframe would
   take the pointer.
+- iOS ignores `interactive-widget` and `dvh` for its on-screen keyboard: it
+  covers the page and slides the whole page to keep the cursor in view. So
+  `graphix-app` is `position: fixed` and follows `window.visualViewport`
+  (except when zoomed), and `html` and `body` never scroll. Emulation has no
+  on-screen keyboard; `e2e/mobile.spec.ts` fakes `visualViewport` instead, and
+  only a real iPhone shows whether it works.
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.

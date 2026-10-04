@@ -43,6 +43,11 @@ export class GraphixApp extends LitElement {
   static styles = css`
     :host {
       display: block;
+      /* Fixed, so it can follow the visible area; see #fitToVisibleArea. */
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
       /* On mobile, vh counts the space behind the browser's toolbars; dvh doesn't. */
       height: 100vh;
       height: 100dvh;
@@ -77,14 +82,33 @@ export class GraphixApp extends LitElement {
     this.narrow = narrowScreen.matches;
   };
 
+  /**
+   * iOS doesn't resize the page for its on-screen keyboard: the keyboard covers
+   * the page, and Safari slides the whole page up to keep the cursor in view.
+   * So fit the app to the part that's visible and keep it there, and only the
+   * panes scroll. Zoomed in, the app keeps its size, so zooming still works.
+   */
+  #fitToVisibleArea = () => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const zoomed = Math.abs(viewport.scale - 1) > 0.01;
+    this.style.height = zoomed ? '' : `${viewport.height}px`;
+    this.style.transform = zoomed ? '' : `translateY(${viewport.offsetTop}px)`;
+  };
+
   connectedCallback() {
     super.connectedCallback();
     narrowScreen.addEventListener('change', this.#onScreenChange);
+    window.visualViewport?.addEventListener('resize', this.#fitToVisibleArea);
+    window.visualViewport?.addEventListener('scroll', this.#fitToVisibleArea);
+    this.#fitToVisibleArea();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     narrowScreen.removeEventListener('change', this.#onScreenChange);
+    window.visualViewport?.removeEventListener('resize', this.#fitToVisibleArea);
+    window.visualViewport?.removeEventListener('scroll', this.#fitToVisibleArea);
   }
 
   #onInput(event: Event) {
