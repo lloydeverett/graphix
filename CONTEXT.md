@@ -17,7 +17,7 @@ Throwing away the Preview's iframe and building it afresh from the current Sourc
 _Avoid_: reload, reset
 
 **Base Style**:
-The stylesheet the Preview starts from, before any styles in the Source: graphix's own, the browser's defaults ("HTML only"), or one of the classless stylesheets bundled from cssbed.com. Changing it restyles the Preview in place.
+The stylesheet the Preview starts from, before any styles in the Source: the default (water.css, dark or light to match the user's colour scheme), the browser's defaults ("HTML only"), or one of the classless stylesheets bundled from cssbed.com. Changing it restyles the Preview in place.
 _Avoid_: theme, skin
 
 **Diagram**:

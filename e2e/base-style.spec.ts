@@ -12,9 +12,9 @@ async function chooseBaseStyle(editor: Editor, id: string) {
 const bodyBackground = (editor: Editor) =>
   editor.inPreview(() => getComputedStyle(document.body).backgroundColor);
 
-test('sits just left of Refresh, starting on graphix', async ({ editor, page }) => {
+test('sits just left of Refresh, starting on default', async ({ editor, page }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
-  await expect(picker(page)).toHaveValue('graphix');
+  await expect(picker(page)).toHaveValue('default');
   const pickerBox = (await picker(page).boundingBox())!;
   const refreshBox = (await page.getByRole('button', { name: 'Refresh' }).boundingBox())!;
   expect(refreshBox.x - (pickerBox.x + pickerBox.width)).toBeGreaterThanOrEqual(0);
@@ -42,13 +42,35 @@ test('restyles the Preview in place, and keeps the choice', async ({ editor, pag
   expect(await bodyBackground(editor)).toBe('rgb(32, 43, 56)');
 });
 
+test('default is water.css, dark or light to match the colour scheme', async ({ editor, page }) => {
+  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+  // water.css-light's background is #fff, and water.css-dark's #202b38.
+  expect(await bodyBackground(editor)).toBe('rgb(255, 255, 255)');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect.poll(() => bodyBackground(editor)).toBe('rgb(32, 43, 56)');
+
+  await page.reload();
+  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+  await expect.poll(() => bodyBackground(editor)).toBe('rgb(32, 43, 56)');
+});
+
+test('starts on default when the saved Base Style is gone', async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:base-style', 'graphix'));
+  await page.reload();
+  await expect(picker(page)).toHaveValue('default');
+  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+});
+
 test('"HTML only" leaves the browser defaults', async ({ editor }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
   await chooseBaseStyle(editor, 'none');
   expect(await editor.inPreview(() => getComputedStyle(document.body).margin)).toBe('8px');
 
-  await chooseBaseStyle(editor, 'graphix');
-  expect(await editor.inPreview(() => getComputedStyle(document.body).margin)).toBe('16px');
+  expect(await bodyBackground(editor)).toBe('rgba(0, 0, 0, 0)');
+
+  await chooseBaseStyle(editor, 'default');
+  expect(await bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 });
 
 test.describe('when a Base Style fails to load', () => {
@@ -56,19 +78,20 @@ test.describe('when a Base Style fails to load', () => {
 
   test('keeps the one it has', async ({ editor, page }) => {
     await expect(editor.preview.locator('h1')).toBeVisible();
+    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
     // Dev builds add a query string.
-    const waterDark = /\/water\.css-dark\.[^/?]*css(\?|$)/;
-    await page.route(waterDark, (route) => route.abort());
+    const sakura = /\/sakura\.[^/?]*css(\?|$)/;
+    await page.route(sakura, (route) => route.abort());
 
-    const failed = page.waitForEvent('requestfailed', (request) => waterDark.test(request.url()));
-    await picker(page).selectOption('water.css-dark');
+    const failed = page.waitForEvent('requestfailed', (request) => sakura.test(request.url()));
+    await picker(page).selectOption('sakura');
     await failed;
-    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'graphix');
-    expect(await editor.inPreview(() => getComputedStyle(document.body).margin)).toBe('16px');
+    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+    expect(await bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 
     // And can still change to another.
-    await page.unroute(waterDark);
-    await chooseBaseStyle(editor, 'sakura');
+    await page.unroute(sakura);
+    await chooseBaseStyle(editor, 'tufte');
   });
 });
 
@@ -77,7 +100,7 @@ test('shows a Render Error under any Base Style', async ({ editor }) => {
   await editor.setSource('<gx-mermaid>\nflowchart LR\n  A -->\n</gx-mermaid>');
   const alert = editor.preview.getByRole('alert');
   await expect(alert).toBeVisible();
-  // The graphix Base Style's error colours, though it isn't loaded.
+  // graphix's own error colours, whatever the Base Style.
   await expect(alert).toHaveCSS('background-color', 'rgb(255, 235, 233)');
   await expect(alert).toHaveCSS('border-top-color', 'rgb(255, 129, 130)');
 });

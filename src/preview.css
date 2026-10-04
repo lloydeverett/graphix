@@ -1,8 +1,0 @@
-@import './theme.css';
-
-body {
-  margin: 16px;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: system-ui, sans-serif;
-}

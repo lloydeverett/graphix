@@ -1,10 +1,11 @@
 /**
- * The Base Styles the Preview can be rendered with: graphix's own, the
- * browser's defaults, and the classless stylesheets listed on cssbed.com,
- * bundled from `src/base-styles/`.
+ * The Base Styles the Preview can be rendered with: the default (water.css,
+ * dark or light to match the user's colour scheme), the browser's defaults,
+ * and the classless stylesheets listed on cssbed.com, bundled from
+ * `src/base-styles/`.
  */
 export const BASE_STYLES = [
-  { id: 'graphix', label: 'graphix' },
+  { id: 'default', label: 'default' },
   { id: 'none', label: 'HTML only' },
   { id: 'awsm.css', label: 'awsm.css' },
   { id: 'bahunya', label: 'bahunya' },
@@ -31,7 +32,7 @@ export const BASE_STYLES = [
 
 export type BaseStyleId = (typeof BASE_STYLES)[number]['id'];
 
-export const DEFAULT_BASE_STYLE: BaseStyleId = 'graphix';
+export const DEFAULT_BASE_STYLE: BaseStyleId = 'default';
 
 export function isBaseStyleId(value: unknown): value is BaseStyleId {
   return BASE_STYLES.some((style) => style.id === value);
