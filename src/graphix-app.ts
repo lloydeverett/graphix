@@ -57,6 +57,12 @@ export class GraphixApp extends LitElement {
       height: 100%;
       --split-divider-color: var(--border);
       --split-divider-active-color: var(--syntax-attribute);
+      /* Enough of the Source and Preview to read and edit. */
+      --split-pane-min-size: 240px;
+    }
+
+    split-pane[orientation='vertical'] {
+      --split-pane-min-size: 120px;
     }
 
     source-editor {

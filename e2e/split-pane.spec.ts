@@ -9,6 +9,12 @@ async function editorSize(page: Page, axis: 'width' | 'height') {
   return box![axis];
 }
 
+/** The Preview's size along the split. */
+async function previewSize(page: Page, axis: 'width' | 'height') {
+  const box = await page.locator('preview-pane').boundingBox();
+  return box![axis];
+}
+
 /** Drags the divider by (dx, dy), starting from its centre. */
 async function dragDivider(page: Page, dx: number, dy: number) {
   const box = (await divider(page).boundingBox())!;
@@ -46,11 +52,24 @@ test('dragging the divider resizes the Source and Preview, even over the Preview
 test('keeps both panes usable however far the divider is dragged', async ({ editor, page }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
   await dragDivider(page, -2000, 0);
-  expect(await editorSize(page, 'width')).toBeGreaterThanOrEqual(40);
+  expect(await editorSize(page, 'width')).toBeCloseTo(240, 0);
 
   await dragDivider(page, 4000, 0);
-  const previewWidth = (await page.locator('preview-pane').boundingBox())!.width;
-  expect(previewWidth).toBeGreaterThanOrEqual(40);
+  expect(await previewSize(page, 'width')).toBeCloseTo(240, 0);
+});
+
+test('keeps both panes usable as the window shrinks', async ({ editor, page }) => {
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  await dragDivider(page, -2000, 0);
+
+  await page.setViewportSize({ width: 800, height: 720 });
+  expect(await editorSize(page, 'width')).toBeCloseTo(240, 0);
+
+  // Too narrow for the minimum, the panes split what there is.
+  await page.setViewportSize({ width: 721, height: 720 });
+  await dragDivider(page, 4000, 0);
+  expect(await editorSize(page, 'width')).toBeGreaterThanOrEqual(240);
+  expect(await previewSize(page, 'width')).toBeCloseTo(240, 0);
 });
 
 test('resizes from the keyboard', async ({ editor, page }) => {
@@ -81,6 +100,15 @@ test.describe('on a narrow screen', () => {
     await divider(page).focus();
     await page.keyboard.press('ArrowUp');
     expect(await editorSize(page, 'height')).toBeLessThan(before + 100);
+  });
+
+  test('keeps both panes usable however far the divider is dragged', async ({ editor, page }) => {
+    await expect(editor.preview.locator('h1')).toBeVisible();
+    await dragDivider(page, 0, -2000);
+    expect(await editorSize(page, 'height')).toBeCloseTo(120, 0);
+
+    await dragDivider(page, 0, 4000);
+    expect(await previewSize(page, 'height')).toBeCloseTo(120, 0);
   });
 });
 

@@ -1,8 +1,16 @@
 import { LitElement, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-/** The smallest a pane may be dragged, in pixels. */
-const MIN_PANE_SIZE = 40;
+/**
+ * The smallest a pane may be, along the split. Registered as a length so its
+ * computed value is in pixels, whatever unit the consumer sets it in.
+ */
+const MIN_SIZE_PROPERTY = '--split-pane-min-size';
+try {
+  CSS.registerProperty({ name: MIN_SIZE_PROPERTY, syntax: '<length>', inherits: true, initialValue: '40px' });
+} catch {
+  // Already registered, by another copy of this module.
+}
 
 /** How far an arrow key moves a divider, as a fraction of its two panes. */
 const KEYBOARD_STEP = 0.05;
@@ -22,11 +30,19 @@ const styles = css`
     flex-direction: column;
   }
 
-  /* Panes share the space by flex-grow, which a divider sets as it's dragged. */
-  split-pane > * {
+  /*
+   * Panes share the space by flex-grow, which a divider sets as it's dragged.
+   * They keep their minimum as the split-pane shrinks, up to half of it each.
+   */
+  split-pane > :not(split-divider) {
     flex: 1 1 0;
-    min-width: 0;
+    min-width: min(var(--split-pane-min-size), 50% - 0.5px);
     min-height: 0;
+  }
+
+  split-pane[orientation='vertical'] > :not(split-divider) {
+    min-width: 0;
+    min-height: min(var(--split-pane-min-size), 50% - 0.5px);
   }
 
   split-pane[resizing] {
@@ -104,7 +120,9 @@ const flexGrow = (element: Element) => parseFloat(getComputedStyle(element).flex
  * Lays out its children in a row (or a column, if `orientation` is
  * "vertical"), sharing the space evenly. Put a <split-divider> between two
  * children to let the user resize them; the children are the consumer's to
- * manage. A child's starting share can be set with CSS `flex-grow`.
+ * manage. A child's starting share can be set with CSS `flex-grow`, and the
+ * smallest a child may be along the split with `--split-pane-min-size` (40px
+ * by default, and never more than half the split-pane).
  */
 @customElement('split-pane')
 export class SplitPane extends LitElement {
@@ -200,7 +218,8 @@ export class SplitDivider extends LitElement {
     if (!panes) return;
     const { combined } = this.#measure(panes);
     if (combined <= 0) return;
-    const min = Math.min(MIN_PANE_SIZE, combined / 2);
+    const minSize = parseFloat(getComputedStyle(this).getPropertyValue(MIN_SIZE_PROPERTY)) || 0;
+    const min = Math.min(minSize, combined / 2);
     const fraction = Math.min(Math.max(size, min), combined - min) / combined;
     // Keep the pair's total flex-grow, so other panes keep their share.
     const total = flexGrow(panes[0]) + flexGrow(panes[1]);
