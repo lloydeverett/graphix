@@ -121,7 +121,7 @@ export class SplitPane extends LitElement {
 
   protected updated() {
     for (const child of this.children) {
-      if (child instanceof SplitDivider) child.sync();
+      if (child instanceof SplitDivider) child.syncAria();
     }
   }
 }
@@ -151,7 +151,7 @@ export class SplitDivider extends LitElement {
     this.addEventListener('pointermove', this.#onPointerMove);
     this.addEventListener('lostpointercapture', this.#onPointerEnd);
     this.addEventListener('keydown', this.#onKeyDown);
-    this.sync();
+    this.syncAria();
   }
 
   disconnectedCallback() {
@@ -175,7 +175,7 @@ export class SplitDivider extends LitElement {
   }
 
   /** Updates the ARIA attributes to match the orientation and the panes' sizes. */
-  sync() {
+  syncAria() {
     // A divider between side-by-side panes is a vertical line, and vice versa.
     this.setAttribute('aria-orientation', this.#vertical ? 'horizontal' : 'vertical');
     const panes = this.#panes;
@@ -187,11 +187,11 @@ export class SplitDivider extends LitElement {
 
   /** The leading pane's start and size, and the two panes' combined size, in pixels. */
   #measure([before, after]: [HTMLElement, HTMLElement]) {
-    const a = before.getBoundingClientRect();
-    const b = after.getBoundingClientRect();
+    const leading = before.getBoundingClientRect();
+    const trailing = after.getBoundingClientRect();
     return this.#vertical
-      ? { start: a.top, size: a.height, combined: a.height + b.height }
-      : { start: a.left, size: a.width, combined: a.width + b.width };
+      ? { start: leading.top, size: leading.height, combined: leading.height + trailing.height }
+      : { start: leading.left, size: leading.width, combined: leading.width + trailing.width };
   }
 
   /** Makes the leading pane `size` pixels, within limits, taking the space from its neighbour. */
@@ -206,7 +206,7 @@ export class SplitDivider extends LitElement {
     const total = flexGrow(panes[0]) + flexGrow(panes[1]);
     panes[0].style.flexGrow = String(total * fraction);
     panes[1].style.flexGrow = String(total * (1 - fraction));
-    this.sync();
+    this.syncAria();
   }
 
   #position(event: PointerEvent) {
