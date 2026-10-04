@@ -26,11 +26,10 @@ so its module scripts load as cross-origin requests.
 
 ## Setup
 
-Requires [nvm](https://github.com/nvm-sh/nvm).
+Requires [mise](https://mise.jdx.dev).
 
 ```sh
-nvm install          # Node version from .nvmrc
-npm install -g pnpm  # pnpm then switches itself to the version in package.json
+mise trust && mise install  # Node and pnpm, as pinned in mise.toml
 pnpm install --frozen-lockfile
 ```
 
