@@ -53,6 +53,10 @@ test('default is water.css, dark or light to match the colour scheme', async ({ 
   await page.reload();
   await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
   await expect.poll(() => bodyBackground(editor)).toBe('rgb(32, 43, 56)');
+
+  // With no preference, it's light.
+  await page.emulateMedia({ colorScheme: 'no-preference' });
+  await expect.poll(() => bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 });
 
 test('starts on default when the saved Base Style is gone', async ({ editor, page }) => {
@@ -95,7 +99,7 @@ test.describe('when a Base Style fails to load', () => {
   });
 });
 
-test('shows a Render Error under any Base Style', async ({ editor }) => {
+test('shows a Render Error under any Base Style, in the colour scheme', async ({ editor, page }) => {
   await chooseBaseStyle(editor, 'none');
   await editor.setSource('<gx-mermaid>\nflowchart LR\n  A -->\n</gx-mermaid>');
   const alert = editor.preview.getByRole('alert');
@@ -103,6 +107,34 @@ test('shows a Render Error under any Base Style', async ({ editor }) => {
   // graphix's own error colours, whatever the Base Style.
   await expect(alert).toHaveCSS('background-color', 'rgb(255, 235, 233)');
   await expect(alert).toHaveCSS('border-top-color', 'rgb(255, 129, 130)');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(alert).toHaveCSS('background-color', 'rgb(60, 22, 24)');
+  await expect(alert).toHaveCSS('border-top-color', 'rgb(142, 21, 25)');
+});
+
+test('shows the Source only once its Base Style has loaded', async ({ editor, page }) => {
+  // Chromium holds the first paint for these stylesheets anyway, but other
+  // browsers may not, so note the Base Style shown when the Source arrives.
+  await page.addInitScript(() => {
+    if (!location.pathname.endsWith('preview.html')) return;
+    new MutationObserver((_, observer) => {
+      if (!document.body?.firstElementChild) return;
+      Object.assign(window, { graphixFirstBaseStyle: document.documentElement.dataset.baseStyle });
+      observer.disconnect();
+    }).observe(document, { childList: true, subtree: true });
+  });
+  // Dev builds add a query string.
+  await page.route(/\/water\.css-(dark|light)\.[^/?]*css(\?|$)/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.continue();
+  });
+  await page.reload();
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  const firstBaseStyle = await editor.inPreview(
+    () => (window as unknown as { graphixFirstBaseStyle?: string }).graphixFirstBaseStyle,
+  );
+  expect(firstBaseStyle).toBe('default');
 });
 
 test('loads every Base Style from our own origin', async ({ editor, page }) => {

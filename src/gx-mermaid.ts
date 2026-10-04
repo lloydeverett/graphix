@@ -101,16 +101,24 @@ export class GxMermaid extends LitElement {
       display: block;
     }
 
+    /* graphix's error colours, as in theme.css, whatever the Base Style. */
     .error {
       margin: 0 0 12px;
       padding: 8px 12px;
-      /* The graphix Base Style sets these; other Base Styles don't. */
-      border: 1px solid var(--error-border, #ff8182);
+      border: 1px solid #ff8182;
       border-radius: 6px;
-      background: var(--error-bg, #ffebe9);
-      color: var(--error-fg, #82071e);
+      background: #ffebe9;
+      color: #82071e;
       font: 13px/1.4 ui-monospace, monospace;
       white-space: pre-wrap;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .error {
+        border-color: #8e1519;
+        background: #3c1618;
+        color: #ffa198;
+      }
     }
 
     .diagram {

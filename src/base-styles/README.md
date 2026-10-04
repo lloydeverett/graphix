@@ -37,6 +37,7 @@ Left out, though cssbed.com lists them:
   linked to rather than copied.
 - **evenbettermotherfucking**: GPL-3.0.
 
-To add one, copy it here with its license at the top, import its URL in
-`src/base-style-urls.ts`, and list it in `src/base-style.ts`. It mustn't load
+To add one, copy it here with its license at the top, add its stylesheet to
+`BASE_STYLE_SHEETS` in `src/base-style-sheets.ts`, and list it in
+`src/base-style.ts`. It mustn't load
 anything from another origin: no `@import` or `url()` pointing off-site.
