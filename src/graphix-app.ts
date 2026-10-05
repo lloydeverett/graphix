@@ -1,15 +1,21 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { Settings } from 'lucide';
+import './context-menu.js';
 import './preview-pane.js';
 // Parcel drops a type-only import entirely, so import for the side effect too.
 import './source-editor.js';
 import './split-pane.js';
 import { type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
+import type { MenuItem } from './context-menu.js';
+import { icon } from './icon.js';
 import type { PreviewPane } from './preview-pane.js';
 import type { SourceEditor } from './source-editor.js';
+import { toolbarStyles } from './toolbar-styles.js';
 
 const SOURCE_STORAGE_KEY = 'graphix:source';
 const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
+const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
 
 /** Below this width the Source is stacked above the Preview. */
 const narrowScreen = matchMedia('(max-width: 720px)');
@@ -58,43 +64,74 @@ function saveBaseStyle(baseStyle: BaseStyleId) {
   }
 }
 
+function loadWordWrap(): boolean {
+  try {
+    return localStorage.getItem(WORD_WRAP_STORAGE_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function saveWordWrap(wordWrap: boolean) {
+  try {
+    localStorage.setItem(WORD_WRAP_STORAGE_KEY, String(wordWrap));
+  } catch {
+    // Storage unavailable; the setting just won't persist.
+  }
+}
+
 @customElement('graphix-app')
 export class GraphixApp extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      /* Fixed, so it can follow the visible area; see #fitToVisibleArea. */
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      /* On mobile, vh counts the space behind the browser's toolbars; dvh doesn't. */
-      height: 100vh;
-      height: 100dvh;
-    }
+  static styles = [
+    toolbarStyles,
+    css`
+      :host {
+        display: block;
+        /* Fixed, so it can follow the visible area; see #fitToVisibleArea. */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        /* On mobile, vh counts the space behind the browser's toolbars; dvh doesn't. */
+        height: 100vh;
+        height: 100dvh;
+      }
 
-    split-pane {
-      height: 100%;
-      --split-divider-color: var(--border);
-      --split-divider-active-color: var(--syntax-attribute);
-      /* Enough of the Source and Preview to read and edit. */
-      --split-pane-min-size: 240px;
-    }
+      split-pane {
+        height: 100%;
+        --split-divider-color: var(--border);
+        --split-divider-active-color: var(--syntax-attribute);
+        /* Enough of the Source and Preview to read and edit. */
+        --split-pane-min-size: 240px;
+      }
 
-    split-pane[orientation='vertical'] {
-      --split-pane-min-size: 120px;
-    }
+      split-pane[orientation='vertical'] {
+        --split-pane-min-size: 120px;
+      }
 
-    source-editor {
-      display: block;
-    }
-  `;
+      .source {
+        display: flex;
+        flex-direction: column;
+      }
+
+      source-editor {
+        display: block;
+        flex: 1;
+        min-height: 0;
+      }
+    `,
+  ];
 
   /** The Source as typed. */
   @state() source = loadSource();
 
   /** The Base Style the Preview is shown with. */
   @state() baseStyle = loadBaseStyle();
+
+  /** Whether long lines in the Source wrap. */
+  @state() wordWrap = loadWordWrap();
+
+  #settingsIcon = icon(Settings);
 
   /** Whether the screen is narrow enough to stack the Source above the Preview. */
   @state() narrow = narrowScreen.matches;
@@ -142,13 +179,44 @@ export class GraphixApp extends LitElement {
     saveBaseStyle(this.baseStyle);
   }
 
+  #onWordWrapSelect(event: Event) {
+    this.wordWrap = (event.target as MenuItem).checked;
+    saveWordWrap(this.wordWrap);
+  }
+
   render() {
     return html`
       <split-pane
         orientation=${this.narrow ? 'vertical' : 'horizontal'}
         storage-key="graphix:split"
       >
-        <source-editor .value=${this.source} @source-input=${this.#onInput}></source-editor>
+        <div class="source">
+          <header>
+            <button
+              type="button"
+              class="icon-button"
+              aria-label="Settings"
+              title="Settings"
+              aria-haspopup="menu"
+              popovertarget="settings-menu"
+            >
+              ${this.#settingsIcon}
+            </button>
+            <!-- Lined up with the gear's right edge, so it opens over the Source, not the Preview. -->
+            <context-menu id="settings-menu" aria-label="Settings" align="end">
+              <menu-item
+                type="checkbox"
+                .checked=${this.wordWrap}
+                @menu-select=${this.#onWordWrapSelect}
+              >Word wrap</menu-item>
+            </context-menu>
+          </header>
+          <source-editor
+            .value=${this.source}
+            .wordWrap=${this.wordWrap}
+            @source-input=${this.#onInput}
+          ></source-editor>
+        </div>
         <split-divider aria-label="Resize the Source and Preview"></split-divider>
         <preview-pane
           .source=${this.source}

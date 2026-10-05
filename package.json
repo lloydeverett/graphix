@@ -19,6 +19,7 @@
   "dependencies": {
     "@codemirror/lang-html": "^6.4.12",
     "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
     "@lezer/highlight": "^1.2.4",
     "codemirror": "^6.0.2",
     "elkjs": "^0.9.3",

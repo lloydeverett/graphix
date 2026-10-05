@@ -1,9 +1,11 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
-import { RefreshCw, createElement } from 'lucide';
+import { RefreshCw } from 'lucide';
 import { BASE_STYLES, type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
+import { icon } from './icon.js';
 import { type BaseStyleMessage, type SourceMessage, isReadyMessage } from './preview-protocol.js';
+import { toolbarStyles } from './toolbar-styles.js';
 
 /**
  * preview.html is its own Parcel entry, served beside the editor. Reached via
@@ -49,46 +51,22 @@ function previewUrl(nonce: string, baseStyle: BaseStyleId) {
  */
 @customElement('preview-pane')
 export class PreviewPane extends LitElement {
-  static styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
+  static styles = [
+    toolbarStyles,
+    css`
+      :host {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
 
-    header {
-      display: flex;
-      justify-content: flex-end;
-      gap: 6px;
-      padding: 4px 8px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    button,
-    select {
-      padding: 2px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--bg);
-      color: var(--fg);
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .icon-button {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 6px;
-    }
-
-    iframe {
-      flex: 1;
-      width: 100%;
-      border: none;
-    }
-  `;
+      iframe {
+        flex: 1;
+        width: 100%;
+        border: none;
+      }
+    `,
+  ];
 
   @property() source = '';
 
@@ -103,8 +81,7 @@ export class PreviewPane extends LitElement {
    */
   #src = '';
 
-  /** Made once, so each render reuses the same node. */
-  #refreshIcon = createElement(RefreshCw, { width: 16, height: 16, 'aria-hidden': 'true' });
+  #refreshIcon = icon(RefreshCw);
 
   /** Connects to the current iframe's runtime once it reports ready. */
   #port?: MessagePort;

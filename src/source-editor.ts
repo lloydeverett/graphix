@@ -1,5 +1,6 @@
 import { html as htmlLanguage } from '@codemirror/lang-html';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { Compartment } from '@codemirror/state';
 import { tags } from '@lezer/highlight';
 import { EditorView, basicSetup } from 'codemirror';
 import { LitElement } from 'lit';
@@ -58,6 +59,11 @@ export class SourceEditor extends LitElement {
   /** The Source. Setting it from outside replaces the Source in the editor, as one undoable edit. */
   @property() value = '';
 
+  /** Whether long lines wrap to fit the editor, rather than scroll sideways. */
+  @property({ type: Boolean }) wordWrap = true;
+
+  #wordWrapCompartment = new Compartment();
+
   #view?: EditorView;
 
   /** Set while `updated()` applies an outside `value`, which isn't an edit to report. */
@@ -76,7 +82,7 @@ export class SourceEditor extends LitElement {
         basicSetup,
         htmlLanguage(),
         syntaxHighlighting(highlightStyle),
-        EditorView.lineWrapping,
+        this.#wordWrapCompartment.of(this.#wordWrapExtension()),
         EditorView.contentAttributes.of({ 'aria-label': 'HTML source', spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || this.#applyingValue) return;
@@ -94,7 +100,14 @@ export class SourceEditor extends LitElement {
     this.#view = undefined;
   }
 
+  #wordWrapExtension() {
+    return this.wordWrap ? EditorView.lineWrapping : [];
+  }
+
   protected updated(changed: Map<PropertyKey, unknown>) {
+    if (changed.has('wordWrap')) {
+      this.#view?.dispatch({ effects: this.#wordWrapCompartment.reconfigure(this.#wordWrapExtension()) });
+    }
     // Edits made in the editor already match; only outside changes replace it.
     const view = this.#view;
     if (changed.has('value') && view && this.value !== view.state.doc.toString()) {

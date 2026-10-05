@@ -8,6 +8,7 @@
   --error-bg: #ffebe9;
   --error-fg: #82071e;
   --error-border: #ff8182;
+  --shadow: #1f232833;
   /*
    * Text keeps 4.5:1 contrast on every highlight, stacked as they can be.
    * The active line is see-through, or it would hide the selection beneath it.
@@ -33,6 +34,7 @@
     --error-bg: #3c1618;
     --error-fg: #ffa198;
     --error-border: #8e1519;
+    --shadow: #01040999;
     --selection: #1c3557;
     --active-line: #656c761a;
     --selection-match: #2ea04326;
