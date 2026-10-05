@@ -192,3 +192,76 @@ for (const colorScheme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test("colours CodeMirror's tooltips and search fields with the dark theme, and leaves the light theme's", async ({
+  editor,
+  page,
+}) => {
+  /** The computed colour of a theme token. */
+  const token = (name: string) =>
+    page.evaluate((name) => {
+      const probe = document.body.appendChild(document.createElement('span'));
+      probe.style.color = `var(${name})`;
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    }, name);
+
+  await editor.setSource('');
+  await editor.sourceBox.click();
+  await page.keyboard.press('ControlOrMeta+f');
+  await page.keyboard.type('word');
+  await editor.sourceBox.click();
+  await page.keyboard.type('<di');
+  await expect(page.locator('source-editor .cm-tooltip-autocomplete')).toBeVisible();
+
+  const colours = async () => ({
+    field: await background(page, '.cm-search .cm-textfield'),
+    button: await background(page, '.cm-search .cm-button'),
+    tooltip: await background(page, '.cm-tooltip-autocomplete'),
+    option: await background(page, '.cm-tooltip-autocomplete li[aria-selected]'),
+  });
+
+  // CodeMirror's own light colours.
+  expect(await colours()).toMatchObject({
+    field: 'rgb(255, 255, 255)',
+    tooltip: 'rgb(245, 245, 245)',
+    option: 'rgb(17, 119, 204)',
+  });
+
+  // Switched while the editor is open, as when the system's theme changes.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect
+    .poll(colours)
+    .toEqual({
+      field: await token('--bg'),
+      button: await token('--bg'),
+      tooltip: await token('--surface'),
+      option: await token('--selection'),
+    });
+});
+
+test("keeps the search panel at the toolbar's size whatever the text size", async ({ editor, page }) => {
+  const fontSize = (selector: string) =>
+    page
+      .locator(`source-editor ${selector}`)
+      .first()
+      .evaluate((element) => getComputedStyle(element).fontSize);
+  const setTextSize = (size: number) =>
+    page.locator('source-editor').evaluate((element, size) => {
+      (element as HTMLElement & { textSize: number }).textSize = size;
+    }, size);
+
+  await editor.sourceBox.click();
+  await page.keyboard.press('ControlOrMeta+f');
+  const field = await fontSize('.cm-search .cm-textfield');
+  const text = await fontSize('.cm-line');
+  // As the toolbar's controls are.
+  expect(field).toBe('13px');
+  expect(await fontSize('.cm-search .cm-button')).toBe(field);
+  expect(await fontSize('.cm-search label')).toBe(field);
+
+  await setTextSize(24);
+  await expect.poll(() => fontSize('.cm-line')).not.toBe(text);
+  expect(await fontSize('.cm-search .cm-textfield')).toBe(field);
+});

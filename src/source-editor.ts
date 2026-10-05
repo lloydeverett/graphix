@@ -47,9 +47,54 @@ const theme = EditorView.theme({
   },
   '.cm-matchingBracket': { background: 'var(--selection)', outline: 'none' },
   // Where Vim mode's `:` and `/` commands are typed, as is a search.
-  '.cm-panels': { background: 'var(--surface)', color: 'var(--fg)' },
+  '.cm-panels': { background: 'var(--surface)', color: 'var(--fg)', fontSize: 'var(--editor-panel-font-size)' },
+  // CodeMirror shrinks these to under the panel's size; keep them at it, as the toolbar's controls are.
+  '.cm-textfield, .cm-button, .cm-panel.cm-search label': { fontSize: 'inherit' },
   '.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
 });
+
+/**
+ * The dark theme's colours for CodeMirror's tooltips, fields and buttons,
+ * which are otherwise its own. The light theme keeps CodeMirror's colours.
+ */
+const darkTheme = EditorView.theme(
+  {
+    '.cm-tooltip': {
+      background: 'var(--surface)',
+      color: 'var(--fg)',
+      border: '1px solid var(--border)',
+    },
+    '.cm-tooltip-section:not(:first-child)': { borderTop: '1px solid var(--border)' },
+    '.cm-tooltip .cm-tooltip-arrow': {
+      '&:before': { borderTopColor: 'var(--border)', borderBottomColor: 'var(--border)' },
+      '&:after': { borderTopColor: 'var(--surface)', borderBottomColor: 'var(--surface)' },
+    },
+    '.cm-tooltip-autocomplete ul li[aria-selected]': {
+      background: 'var(--selection)',
+      color: 'var(--fg)',
+    },
+    // A search's fields and buttons, like the toolbar's.
+    '.cm-textfield': {
+      background: 'var(--bg)',
+      border: '1px solid var(--border)',
+    },
+    '.cm-button': {
+      background: 'var(--bg)',
+      border: '1px solid var(--border)',
+      '&:active': { background: 'var(--active-line)' },
+    },
+    // What stands in for folded lines, which CodeMirror colours light in either theme.
+    '.cm-foldPlaceholder': {
+      background: 'var(--bg)',
+      border: '1px solid var(--border)',
+      color: 'var(--syntax-comment)',
+    },
+  },
+  { dark: true },
+);
+
+/** Whether the page is in its dark theme, as theme.css decides it. */
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 
 /**
  * Vim mode in the theme's colours. Vim colours some things inline, so these
@@ -66,6 +111,10 @@ const vimTheme = Prec.highest(
     '&:not(.cm-focused) .cm-fat-cursor': { background: 'none', outline: '1px solid var(--fg)' },
     // Vim shows every message in red, from "1 lines yanked" to an error, so show them all as text.
     '.cm-vim-message': { color: 'var(--fg) !important' },
+    // A prompt, `:` or `/`, sets its own font inline; take the panel's, so the
+    // prompt and what's typed after it are in one font, side by side.
+    '.cm-vim-panel [style*="font-family"]': { fontFamily: 'inherit !important' },
+    '.cm-vim-panel input': { font: 'inherit', color: 'inherit', padding: '0', margin: '0' },
     // A prompt's hint, like the one beside a search.
     '.cm-vim-panel [style*="color"]:not(.cm-vim-message)': { color: 'var(--syntax-comment) !important' },
   }),
@@ -97,6 +146,7 @@ export class SourceEditor extends LitElement {
   #wordWrapCompartment = new Compartment();
   #fontCompartment = new Compartment();
   #vimCompartment = new Compartment();
+  #darkCompartment = new Compartment();
 
   #view?: EditorView;
 
@@ -119,6 +169,7 @@ export class SourceEditor extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    darkQuery.addEventListener('change', this.#onColorScheme);
     this.#view ??= new EditorView({
       parent: this,
       doc: this.value,
@@ -130,6 +181,7 @@ export class SourceEditor extends LitElement {
         syntaxHighlighting(highlightStyle),
         this.#wordWrapCompartment.of(this.#wordWrapExtension()),
         this.#fontCompartment.of(this.#fontTheme()),
+        this.#darkCompartment.of(this.#darkExtension()),
         EditorView.contentAttributes.of({ 'aria-label': 'HTML source', spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || this.#applyingValue) return;
@@ -143,9 +195,19 @@ export class SourceEditor extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    darkQuery.removeEventListener('change', this.#onColorScheme);
     this.#view?.destroy();
     this.#view = undefined;
   }
+
+  /** In the dark theme, `darkTheme`, which also has CodeMirror use its dark colours. */
+  #darkExtension() {
+    return darkQuery.matches ? darkTheme : [];
+  }
+
+  #onColorScheme = () => {
+    this.#view?.dispatch({ effects: this.#darkCompartment.reconfigure(this.#darkExtension()) });
+  };
 
   #wordWrapExtension() {
     return this.wordWrap ? EditorView.lineWrapping : [];
@@ -171,11 +233,14 @@ export class SourceEditor extends LitElement {
    * The text's size and font, as a theme of their own: CodeMirror measures
    * every line again when its theme changes, but not when a CSS variable
    * does, and until it does the line numbers stay where the lines were.
+   * Autocomplete lists code, so it's in the text's size too, but panels
+   * like a search's are the editor's own controls, and keep theirs.
    */
   #fontTheme() {
     return EditorView.theme({
-      '&': { fontSize: `${this.textSize}px` },
-      '.cm-scroller': {
+      '.cm-scroller, .cm-tooltip-autocomplete': { fontSize: `${this.textSize}px` },
+      // And Vim's panel, where `:` and `/` commands are typed, as Vim gives it a monospace font.
+      '.cm-scroller, .cm-vim-panel': {
         fontFamily: this.systemFont ? 'var(--editor-system-font-family)' : 'var(--editor-font-family)',
       },
     });

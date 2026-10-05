@@ -365,3 +365,51 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await page.keyboard.press('Enter');
   await expect(wordWrap).not.toBeChecked();
 });
+
+test("Vim mode's prompts are in the Source's font, typed just after the prompt, and follow Use system font", async ({
+  editor,
+  page,
+}) => {
+  await startInVimMode(editor, '<p>one</p>');
+  const input = page.locator('source-editor .cm-vim-panel input');
+  const fonts = () =>
+    input.evaluate((element) => {
+      const font = (target: Element) => getComputedStyle(target).fontFamily;
+      return {
+        prompt: font(element.parentElement!),
+        input: font(element),
+        source: font(document.querySelector('graphix-app')!.shadowRoot!.querySelector('source-editor .cm-scroller')!),
+      };
+    });
+  /** Where the prompt's `:` or `/` sits, and where the input's text starts after it. */
+  const layout = () =>
+    input.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element.previousSibling!);
+      const prompt = range.getBoundingClientRect();
+      const field = element.getBoundingClientRect();
+      return { gap: field.left - prompt.right, top: field.top - prompt.top, height: field.height - prompt.height };
+    });
+
+  for (const prompt of [':', '/']) {
+    await page.keyboard.type(prompt);
+    await expect(input).toBeFocused();
+    const { source, ...rest } = await fonts();
+    expect(source).toMatch(/^"?Cascadia Mono"?,/);
+    expect(rest).toEqual({ prompt: source, input: source });
+    const { gap, top, height } = await layout();
+    expect(Math.abs(gap), 'gap after the prompt').toBeLessThan(0.5);
+    expect(Math.abs(top), 'offset from the prompt').toBeLessThan(0.5);
+    expect(Math.abs(height), 'height beside the prompt').toBeLessThan(0.5);
+    await page.keyboard.press('Escape');
+  }
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Use system font' }).click();
+  await editor.sourceBox.click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.type(':');
+  await expect.poll(async () => (await fonts()).input).toMatch(/^ui-monospace/);
+  const { source, ...rest } = await fonts();
+  expect(rest).toEqual({ prompt: source, input: source });
+});
