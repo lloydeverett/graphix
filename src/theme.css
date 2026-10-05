@@ -1,7 +1,8 @@
 :root {
   color-scheme: light dark;
-  --editor-font-size: 14px;
-  --editor-font-family: 'Cascadia Mono', ui-monospace, monospace;
+  /* The Source's font, and the system's, for when Use system font is on. */
+  --editor-system-font-family: ui-monospace, monospace;
+  --editor-font-family: 'Cascadia Mono', var(--editor-system-font-family);
   --bg: #ffffff;
   --fg: #1f2328;
   --border: #d1d9e0;
@@ -46,12 +47,5 @@
     --syntax-string: #a5d6ff;
     --syntax-comment: #a0a8b2;
     --syntax-keyword: #ff7b72;
-  }
-}
-
-/* Mobile browsers zoom in on focused text smaller than 16px. */
-@media (pointer: coarse) {
-  :root {
-    --editor-font-size: 16px;
   }
 }

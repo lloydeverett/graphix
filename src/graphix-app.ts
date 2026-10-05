@@ -1,6 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { Settings } from 'lucide';
+import { Minus, Plus, Settings } from 'lucide';
 import './context-menu.js';
 import './preview-pane.js';
 // Parcel drops a type-only import entirely, so import for the side effect too.
@@ -17,6 +17,11 @@ const SOURCE_STORAGE_KEY = 'graphix:source';
 const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
 const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
 const SYSTEM_FONT_STORAGE_KEY = 'graphix:system-font';
+const TEXT_SIZE_STORAGE_KEY = 'graphix:text-size';
+
+/** The range of text sizes the Source can be set to, in px. */
+const MIN_TEXT_SIZE = 10;
+const MAX_TEXT_SIZE = 32;
 
 /** Below this width the Source is stacked above the Preview. */
 const narrowScreen = matchMedia('(max-width: 720px)');
@@ -97,6 +102,31 @@ function saveSystemFont(systemFont: boolean) {
   }
 }
 
+/**
+ * The text size until the user picks one. Mobile browsers zoom in on focused
+ * text smaller than 16px, so touch screens start there.
+ */
+function defaultTextSize(): number {
+  return matchMedia('(pointer: coarse)').matches ? 16 : 14;
+}
+
+function loadTextSize(): number {
+  try {
+    const saved = Number(localStorage.getItem(TEXT_SIZE_STORAGE_KEY) ?? NaN);
+    return saved >= MIN_TEXT_SIZE && saved <= MAX_TEXT_SIZE ? saved : defaultTextSize();
+  } catch {
+    return defaultTextSize();
+  }
+}
+
+function saveTextSize(textSize: number) {
+  try {
+    localStorage.setItem(TEXT_SIZE_STORAGE_KEY, String(textSize));
+  } catch {
+    // Storage unavailable; the setting just won't persist.
+  }
+}
+
 @customElement('graphix-app')
 export class GraphixApp extends LitElement {
   static styles = [
@@ -137,8 +167,27 @@ export class GraphixApp extends LitElement {
         min-height: 0;
       }
 
-      source-editor[system-font] {
-        --editor-font-family: ui-monospace, monospace;
+      .text-size {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 4px;
+        padding: 4px 0 0 32px;
+        border-top: 1px solid var(--border);
+      }
+
+      .text-size > span:first-child {
+        flex: 1;
+      }
+
+      .text-size menu-item {
+        padding: 4px;
+      }
+
+      .text-size output {
+        min-width: 2ch;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
       }
     `,
   ];
@@ -155,7 +204,12 @@ export class GraphixApp extends LitElement {
   /** Whether the Source is shown in the system's monospace font, rather than Cascadia Mono. */
   @state() systemFont = loadSystemFont();
 
+  /** The Source's text size, in px. */
+  @state() textSize = loadTextSize();
+
   #settingsIcon = icon(Settings);
+  #smallerIcon = icon(Minus);
+  #largerIcon = icon(Plus);
 
   /** Whether the screen is narrow enough to stack the Source above the Preview. */
   @state() narrow = narrowScreen.matches;
@@ -213,6 +267,11 @@ export class GraphixApp extends LitElement {
     saveSystemFont(this.systemFont);
   }
 
+  #stepTextSize(step: number) {
+    this.textSize += step;
+    saveTextSize(this.textSize);
+  }
+
   render() {
     return html`
       <split-pane
@@ -243,12 +302,29 @@ export class GraphixApp extends LitElement {
                 .checked=${this.systemFont}
                 @menu-select=${this.#onSystemFontSelect}
               >Use system font</menu-item>
+              <div class="text-size" role="group" aria-label="Text size">
+                <span>Text size</span>
+                <menu-item
+                  keep-open
+                  aria-label="Smaller text"
+                  .disabled=${this.textSize <= MIN_TEXT_SIZE}
+                  @menu-select=${() => this.#stepTextSize(-1)}
+                >${this.#smallerIcon}</menu-item>
+                <output>${this.textSize}</output>
+                <menu-item
+                  keep-open
+                  aria-label="Larger text"
+                  .disabled=${this.textSize >= MAX_TEXT_SIZE}
+                  @menu-select=${() => this.#stepTextSize(1)}
+                >${this.#largerIcon}</menu-item>
+              </div>
             </context-menu>
           </header>
           <source-editor
             .value=${this.source}
             .wordWrap=${this.wordWrap}
             .systemFont=${this.systemFont}
+            .textSize=${this.textSize}
             @source-input=${this.#onInput}
           ></source-editor>
         </div>

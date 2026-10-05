@@ -17,11 +17,12 @@ function deepActiveElement() {
  * A menu of `<menu-item>`s that pops up beside its `anchor`, above the rest
  * of the page, and follows it while open. It's a popover, so open it with a
  * button's `popovertarget` (which also lets the button close it again, and
- * makes the button its anchor) or `showPopover()`. It closes
- * when an item is chosen, on Escape, on a click outside it, or when the
- * window loses focus, and returns focus to wherever it was before.
+ * makes the button its anchor) or `showPopover()`. It closes when an item is
+ * chosen (unless it's `keep-open`), on Escape, on a click outside it, or when
+ * the window loses focus, and returns focus to wherever it was before.
  *
- * Arrow keys, Home and End move between items; Enter or Space chooses one.
+ * Arrow keys, Home and End move between items, in the order they're in the
+ * menu, however they're laid out; Enter or Space chooses one.
  */
 @customElement('context-menu')
 export class ContextMenu extends LitElement {
@@ -39,6 +40,8 @@ export class ContextMenu extends LitElement {
       background: var(--bg);
       color: var(--fg);
       font-size: 13px;
+      /* It's for choosing, not reading: a double click shouldn't select a word. */
+      user-select: none;
       box-shadow: 0 4px 16px var(--shadow);
     }
   `;
@@ -64,7 +67,9 @@ export class ContextMenu extends LitElement {
     this.addEventListener('beforetoggle', this.#onBeforeToggle);
     this.addEventListener('toggle', this.#onToggle);
     this.addEventListener('keydown', this.#onKeyDown);
-    this.addEventListener('menu-select', () => this.hidePopover());
+    this.addEventListener('menu-select', (event) => {
+      if (!(event.target as MenuItem).keepOpen) this.hidePopover();
+    });
   }
 
   connectedCallback() {
@@ -158,7 +163,8 @@ export class ContextMenu extends LitElement {
 
 /**
  * An item in a `<context-menu>`. Give it `type="checkbox"` to make it a
- * setting that's on or off: choosing it flips `checked`.
+ * setting that's on or off: choosing it flips `checked`. A `disabled` item
+ * can still be focused, but choosing it does nothing.
  *
  * @fires menu-select - when the user chooses the item, after any change to `checked`. Bubbles.
  */
@@ -181,6 +187,14 @@ export class MenuItem extends LitElement {
       background: var(--active-line);
     }
 
+    :host([disabled]) {
+      opacity: 0.4;
+    }
+
+    :host([disabled]:hover) {
+      background: none;
+    }
+
     :host(:focus-visible) {
       outline: 2px solid var(--syntax-attribute);
       outline-offset: -2px;
@@ -198,6 +212,12 @@ export class MenuItem extends LitElement {
 
   /** Whether a checkbox item's setting is on. */
   @property({ type: Boolean, reflect: true }) checked = false;
+
+  /** Whether choosing the item leaves its menu open, for a setting that's often changed a few times in a row. */
+  @property({ type: Boolean, attribute: 'keep-open' }) keepOpen = false;
+
+  /** Whether the item can't be chosen just now. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   #checkIcon = icon(Check);
 
@@ -220,6 +240,7 @@ export class MenuItem extends LitElement {
   }
 
   #choose = () => {
+    if (this.disabled) return;
     if (this.type === 'checkbox') this.checked = !this.checked;
     this.dispatchEvent(new Event('menu-select', { bubbles: true }));
   };
@@ -229,6 +250,8 @@ export class MenuItem extends LitElement {
     this.setAttribute('role', checkbox ? 'menuitemcheckbox' : 'menuitem');
     if (checkbox) this.setAttribute('aria-checked', String(this.checked));
     else this.removeAttribute('aria-checked');
+    if (this.disabled) this.setAttribute('aria-disabled', 'true');
+    else this.removeAttribute('aria-disabled');
   }
 
   render() {

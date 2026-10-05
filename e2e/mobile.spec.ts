@@ -9,6 +9,18 @@ test("uses text large enough that mobile browsers don't zoom in on focus", async
   expect(fontSize).toBeGreaterThanOrEqual(16);
 });
 
+test('uses a text size that was picked, even a smaller one', async ({ editor, page }) => {
+  await expect(editor.sourceBox).toBeVisible();
+  await page.evaluate(() => localStorage.setItem('graphix:text-size', '12'));
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  const fontSize = await editor.sourceBox.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  expect(fontSize).toBe(12);
+
+  await page.getByRole('button', { name: 'Settings' }).tap();
+  await expect(page.getByRole('menu', { name: 'Settings' }).getByRole('status')).toHaveText('12');
+});
+
 // Emulation has no collapsing browser toolbar, so 100vh equals the viewport here
 // and this can't catch a vh-sized layout; it guards against overflow in general.
 test("doesn't scroll the page at phone size", async ({ editor, page }) => {

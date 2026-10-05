@@ -132,6 +132,85 @@ test('the Source is in Cascadia Mono, served from this site, unless Use system f
   await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
 });
 
+test('the text size can be stepped up and down, keeping the menu open, and stays as set', async ({ editor, page }) => {
+  const menu = page.getByRole('menu', { name: 'Settings' });
+  const smaller = page.getByRole('menuitem', { name: 'Smaller text' });
+  const larger = page.getByRole('menuitem', { name: 'Larger text' });
+  const shown = menu.getByRole('status');
+  const fontSize = () => page.locator('source-editor .cm-content').evaluate((element) => getComputedStyle(element).fontSize);
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(fontSize).toBe('14px');
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(shown).toHaveText('14');
+  await larger.click();
+  await larger.click();
+  await expect(menu).toBeVisible();
+  await expect(shown).toHaveText('16');
+  await expect.poll(fontSize).toBe('16px');
+  await smaller.click();
+  await expect(shown).toHaveText('15');
+  await expect.poll(fontSize).toBe('15px');
+
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(fontSize).toBe('15px');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(shown).toHaveText('15');
+
+  // It stops at the smallest size.
+  for (let size = 15; size > 10; size--) await smaller.click();
+  await expect(shown).toHaveText('10');
+  await expect(smaller).toHaveAttribute('aria-disabled', 'true');
+  await smaller.click({ force: true });
+  await expect(shown).toHaveText('10');
+  await expect.poll(fontSize).toBe('10px');
+  await expect(larger).not.toHaveAttribute('aria-disabled');
+});
+
+/** How far each line number is from the line it numbers, in px; 0 when they line up. */
+async function lineNumberDrift(page: Page) {
+  return page.locator('source-editor').evaluate((editor) => {
+    const lines = [...editor.querySelectorAll('.cm-line')];
+    // Leaving out the hidden spacer that sets the gutter's width.
+    const numbers = [...editor.querySelectorAll<HTMLElement>('.cm-lineNumbers .cm-gutterElement')].filter(
+      (element) => element.style.visibility !== 'hidden',
+    );
+    return Math.max(
+      ...lines.map((line, index) =>
+        Math.abs(line.getBoundingClientRect().top - numbers[index]!.getBoundingClientRect().top),
+      ),
+    );
+  });
+}
+
+test('the line numbers follow the text as its size and font change', async ({ editor, page }) => {
+  await editor.setSource(Array.from({ length: 20 }, (_, index) => `<p>${index}</p>`).join('\n'));
+  await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  for (let step = 0; step < 6; step++) await page.getByRole('menuitem', { name: 'Larger text' }).click();
+  await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
+  for (let step = 0; step < 8; step++) await page.getByRole('menuitem', { name: 'Smaller text' }).click();
+  await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
+  await page.getByRole('menuitemcheckbox', { name: 'Use system font' }).click();
+  await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
+});
+
+test("the settings menu's text can't be selected", async ({ editor, page }) => {
+  await expect(editor.sourceBox).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const menu = page.getByRole('menu', { name: 'Settings' });
+  for (const text of [menu.getByText('Text size', { exact: true }), menu.getByRole('status')]) {
+    await text.dblclick();
+    expect(await page.evaluate(() => getSelection()?.toString() ?? '')).toBe('');
+  }
+  // Choosing an item closes the menu, so a double click can't try those; check how they're styled instead.
+  for (const text of [menu.getByText('Text size', { exact: true }), menu.getByRole('status'), menu.getByText('Word wrap')]) {
+    expect(await text.evaluate((element) => getComputedStyle(element).userSelect)).toBe('none');
+  }
+});
+
 test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await editor.setSource(LONG_LINE);
   const settings = page.getByRole('button', { name: 'Settings' });
@@ -150,6 +229,13 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitemcheckbox', { name: 'Use system font' })).toBeFocused();
   await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Smaller text' })).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('menuitem', { name: 'Larger text' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Larger text' })).toBeFocused();
+  await page.keyboard.press('Home');
   await expect(wordWrap).toBeFocused();
   await page.keyboard.press(' ');
   await expect(menu).toBeHidden();

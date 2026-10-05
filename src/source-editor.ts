@@ -21,10 +21,9 @@ const theme = EditorView.theme({
     height: '100%',
     background: 'var(--surface)',
     color: 'var(--fg)',
-    fontSize: 'var(--editor-font-size)',
   },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'var(--editor-font-family)', lineHeight: '1.5' },
+  '.cm-scroller': { lineHeight: '1.5' },
   '.cm-content': { padding: '16px 0', caretColor: 'var(--fg)' },
   '.cm-line': { padding: '0 16px 0 8px' },
   '.cm-cursor': { borderLeftColor: 'var(--fg)' },
@@ -63,9 +62,13 @@ export class SourceEditor extends LitElement {
   @property({ type: Boolean }) wordWrap = true;
 
   /** Whether to show the Source in the system's monospace font, rather than Cascadia Mono. */
-  @property({ type: Boolean, reflect: true, attribute: 'system-font' }) systemFont = false;
+  @property({ type: Boolean }) systemFont = false;
+
+  /** The text size, in px. */
+  @property({ type: Number }) textSize = 14;
 
   #wordWrapCompartment = new Compartment();
+  #fontCompartment = new Compartment();
 
   #view?: EditorView;
 
@@ -86,6 +89,7 @@ export class SourceEditor extends LitElement {
         htmlLanguage(),
         syntaxHighlighting(highlightStyle),
         this.#wordWrapCompartment.of(this.#wordWrapExtension()),
+        this.#fontCompartment.of(this.#fontTheme()),
         EditorView.contentAttributes.of({ 'aria-label': 'HTML source', spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || this.#applyingValue) return;
@@ -107,7 +111,24 @@ export class SourceEditor extends LitElement {
     return this.wordWrap ? EditorView.lineWrapping : [];
   }
 
+  /**
+   * The text's size and font, as a theme of their own: CodeMirror measures
+   * every line again when its theme changes, but not when a CSS variable
+   * does, and until it does the line numbers stay where the lines were.
+   */
+  #fontTheme() {
+    return EditorView.theme({
+      '&': { fontSize: `${this.textSize}px` },
+      '.cm-scroller': {
+        fontFamily: this.systemFont ? 'var(--editor-system-font-family)' : 'var(--editor-font-family)',
+      },
+    });
+  }
+
   protected updated(changed: Map<PropertyKey, unknown>) {
+    if (changed.has('textSize') || changed.has('systemFont')) {
+      this.#view?.dispatch({ effects: this.#fontCompartment.reconfigure(this.#fontTheme()) });
+    }
     if (changed.has('wordWrap')) {
       this.#view?.dispatch({ effects: this.#wordWrapCompartment.reconfigure(this.#wordWrapExtension()) });
     }
