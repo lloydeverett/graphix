@@ -372,15 +372,12 @@ test("Vim mode's prompts are in the Source's font, typed just after the prompt, 
 }) => {
   await startInVimMode(editor, '<p>one</p>');
   const input = page.locator('source-editor .cm-vim-panel input');
-  const fonts = () =>
-    input.evaluate((element) => {
-      const font = (target: Element) => getComputedStyle(target).fontFamily;
-      return {
-        prompt: font(element.parentElement!),
-        input: font(element),
-        source: font(document.querySelector('graphix-app')!.shadowRoot!.querySelector('source-editor .cm-scroller')!),
-      };
-    });
+  const font = (locator: typeof input) => locator.evaluate((element) => getComputedStyle(element).fontFamily);
+  const fonts = async () => ({
+    prompt: await font(input.locator('..')),
+    input: await font(input),
+    source: await font(page.locator('source-editor .cm-scroller')),
+  });
   /** Where the prompt's `:` or `/` sits, and where the input's text starts after it. */
   const layout = () =>
     input.evaluate((element) => {

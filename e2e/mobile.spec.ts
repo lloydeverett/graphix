@@ -9,6 +9,15 @@ test("uses text large enough that mobile browsers don't zoom in on focus", async
   expect(fontSize).toBeGreaterThanOrEqual(16);
 });
 
+test("keeps a search's fields large enough that mobile browsers don't zoom in on them", async ({ editor, page }) => {
+  await editor.sourceBox.tap();
+  await page.keyboard.press('ControlOrMeta+f');
+  const field = page.locator('source-editor .cm-search .cm-textfield').first();
+  await expect(field).toBeFocused();
+  const fontSize = await field.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(16);
+});
+
 test('uses a text size that was picked, even a smaller one', async ({ editor, page }) => {
   await expect(editor.sourceBox).toBeVisible();
   await page.evaluate(() => localStorage.setItem('graphix:text-size', '12'));

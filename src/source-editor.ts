@@ -48,8 +48,9 @@ const theme = EditorView.theme({
   '.cm-matchingBracket': { background: 'var(--selection)', outline: 'none' },
   // Where Vim mode's `:` and `/` commands are typed, as is a search.
   '.cm-panels': { background: 'var(--surface)', color: 'var(--fg)', fontSize: 'var(--editor-panel-font-size)' },
-  // CodeMirror shrinks these to under the panel's size; keep them at it, as the toolbar's controls are.
-  '.cm-textfield, .cm-button, .cm-panel.cm-search label': { fontSize: 'inherit' },
+  // CodeMirror shrinks these to under the panel's size, or fixes it; keep them at it, as the toolbar's controls are.
+  // As specific as CodeMirror's rule for a search's labels, or it wins.
+  '.cm-textfield, .cm-button, .cm-panels .cm-panel label, .cm-dialog-close': { fontSize: 'inherit' },
   '.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
 });
 

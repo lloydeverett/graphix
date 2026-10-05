@@ -218,6 +218,10 @@ test("colours CodeMirror's tooltips and search fields with the dark theme, and l
   const colours = async () => ({
     field: await background(page, '.cm-search .cm-textfield'),
     button: await background(page, '.cm-search .cm-button'),
+    buttonImage: await page
+      .locator('source-editor .cm-search .cm-button')
+      .first()
+      .evaluate((element) => getComputedStyle(element).backgroundImage),
     tooltip: await background(page, '.cm-tooltip-autocomplete'),
     option: await background(page, '.cm-tooltip-autocomplete li[aria-selected]'),
   });
@@ -236,6 +240,8 @@ test("colours CodeMirror's tooltips and search fields with the dark theme, and l
     .toEqual({
       field: await token('--bg'),
       button: await token('--bg'),
+      // Not CodeMirror's dark gradient.
+      buttonImage: 'none',
       tooltip: await token('--surface'),
       option: await token('--selection'),
     });
@@ -257,11 +263,24 @@ test("keeps the search panel at the toolbar's size whatever the text size", asyn
   const field = await fontSize('.cm-search .cm-textfield');
   const text = await fontSize('.cm-line');
   // As the toolbar's controls are.
-  expect(field).toBe('13px');
+  const toolbar = await page
+    .getByRole('button', { name: 'Settings' })
+    .evaluate((element) => getComputedStyle(element).fontSize);
+  expect(field).toBe(toolbar);
   expect(await fontSize('.cm-search .cm-button')).toBe(field);
   expect(await fontSize('.cm-search label')).toBe(field);
 
   await setTextSize(24);
   await expect.poll(() => fontSize('.cm-line')).not.toBe(text);
   expect(await fontSize('.cm-search .cm-textfield')).toBe(field);
+  await page.keyboard.press('Escape');
+
+  // As is Go to line's.
+  await editor.sourceBox.click();
+  await page.keyboard.press('ControlOrMeta+Alt+g');
+  await expect(page.locator('source-editor .cm-dialog')).toBeVisible();
+  expect(await fontSize('.cm-dialog .cm-textfield')).toBe(field);
+  expect(await fontSize('.cm-dialog label')).toBe(field);
+  expect(await fontSize('.cm-dialog .cm-button')).toBe(field);
+  expect(await fontSize('.cm-dialog-close')).toBe(field);
 });

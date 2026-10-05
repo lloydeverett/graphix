@@ -26,7 +26,7 @@ export const toolbarStyles = css`
     background: var(--bg);
     color: var(--fg);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--control-font-size);
     cursor: pointer;
   }
 

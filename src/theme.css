@@ -3,8 +3,10 @@
   /* The Source's font, and the system's, for when Use system font is on. */
   --editor-system-font-family: ui-monospace, monospace;
   --editor-font-family: 'Cascadia Mono', var(--editor-system-font-family);
-  /* The size of the editor's panels, like a search's, whatever the Source's text size; the toolbar's. */
-  --editor-panel-font-size: 13px;
+  /* The size of controls: the toolbars', menus' and the editor's panels', like a search's. */
+  --control-font-size: 13px;
+  /* The editor's panels keep theirs whatever the Source's text size. */
+  --editor-panel-font-size: var(--control-font-size);
   --bg: #ffffff;
   --fg: #1f2328;
   --border: #d1d9e0;

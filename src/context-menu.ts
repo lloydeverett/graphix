@@ -39,7 +39,7 @@ export class ContextMenu extends LitElement {
       border-radius: 8px;
       background: var(--bg);
       color: var(--fg);
-      font-size: 13px;
+      font-size: var(--control-font-size);
       /* It's for choosing, not reading: a double click shouldn't select a word. */
       user-select: none;
       box-shadow: 0 4px 16px var(--shadow);
