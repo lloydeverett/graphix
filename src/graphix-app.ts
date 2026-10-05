@@ -18,6 +18,7 @@ const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
 const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
 const SYSTEM_FONT_STORAGE_KEY = 'graphix:system-font';
 const TEXT_SIZE_STORAGE_KEY = 'graphix:text-size';
+const VIM_MODE_STORAGE_KEY = 'graphix:vim-mode';
 
 /** The range of text sizes the Source can be set to, in px. */
 const MIN_TEXT_SIZE = 10;
@@ -97,6 +98,22 @@ function loadSystemFont(): boolean {
 function saveSystemFont(systemFont: boolean) {
   try {
     localStorage.setItem(SYSTEM_FONT_STORAGE_KEY, String(systemFont));
+  } catch {
+    // Storage unavailable; the setting just won't persist.
+  }
+}
+
+function loadVimMode(): boolean {
+  try {
+    return localStorage.getItem(VIM_MODE_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveVimMode(vimMode: boolean) {
+  try {
+    localStorage.setItem(VIM_MODE_STORAGE_KEY, String(vimMode));
   } catch {
     // Storage unavailable; the setting just won't persist.
   }
@@ -207,6 +224,9 @@ export class GraphixApp extends LitElement {
   /** The Source's text size, in px. */
   @state() textSize = loadTextSize();
 
+  /** Whether the Source is edited with Vim's keys and modes. */
+  @state() vimMode = loadVimMode();
+
   #settingsIcon = icon(Settings);
   #smallerIcon = icon(Minus);
   #largerIcon = icon(Plus);
@@ -267,6 +287,11 @@ export class GraphixApp extends LitElement {
     saveSystemFont(this.systemFont);
   }
 
+  #onVimModeSelect(event: Event) {
+    this.vimMode = (event.target as MenuItem).checked;
+    saveVimMode(this.vimMode);
+  }
+
   #stepTextSize(step: number) {
     this.textSize += step;
     saveTextSize(this.textSize);
@@ -302,6 +327,11 @@ export class GraphixApp extends LitElement {
                 .checked=${this.systemFont}
                 @menu-select=${this.#onSystemFontSelect}
               >Use system font</menu-item>
+              <menu-item
+                type="checkbox"
+                .checked=${this.vimMode}
+                @menu-select=${this.#onVimModeSelect}
+              >Vim mode</menu-item>
               <div class="text-size" role="group" aria-label="Text size">
                 <span>Text size</span>
                 <menu-item
@@ -325,6 +355,7 @@ export class GraphixApp extends LitElement {
             .wordWrap=${this.wordWrap}
             .systemFont=${this.systemFont}
             .textSize=${this.textSize}
+            .vimMode=${this.vimMode}
             @source-input=${this.#onInput}
           ></source-editor>
         </div>

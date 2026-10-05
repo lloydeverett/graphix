@@ -59,7 +59,7 @@ ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
 `src/base-styles/README.md` lists their sources and licenses. It starts on
 **default**: water.css, dark or light to match your colour scheme.
 The gear above the editor opens its settings: turn **Word wrap** off to scroll
-long lines sideways instead. Settings are kept in the browser, like your HTML.
+long lines sideways instead, or **Vim mode** on to edit with Vim's keys. Settings are kept in the browser, like your HTML.
 
 When hosting the built site, serve the preview's scripts with
 `Access-Control-Allow-Origin: *`: the sandboxed iframe has an opaque origin,

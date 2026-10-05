@@ -1,7 +1,8 @@
 import { html as htmlLanguage } from '@codemirror/lang-html';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { Compartment } from '@codemirror/state';
+import { Compartment, Prec } from '@codemirror/state';
 import { tags } from '@lezer/highlight';
+import { getCM, vim } from '@replit/codemirror-vim';
 import { EditorView, basicSetup } from 'codemirror';
 import { LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
@@ -45,7 +46,30 @@ const theme = EditorView.theme({
     outline: '1px solid var(--search-match-outline)',
   },
   '.cm-matchingBracket': { background: 'var(--selection)', outline: 'none' },
+  // Where Vim mode's `:` and `/` commands are typed, as is a search.
+  '.cm-panels': { background: 'var(--surface)', color: 'var(--fg)' },
+  '.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
 });
+
+/**
+ * Vim mode in the theme's colours. Vim colours some things inline, so these
+ * need `!important`; and its own theme takes the highest precedence, so this
+ * does too, and comes first.
+ */
+const vimTheme = Prec.highest(
+  EditorView.theme({
+    // The block cursor, in reverse video: the text's colour, with the letter
+    // under it in the background's. Vim colours that letter as the text it covers.
+    '.cm-fat-cursor': { background: 'var(--fg)' },
+    // Not a short cursor (while an operator waits, or in Replace mode), whose letter Vim hides.
+    '&.cm-focused .cm-fat-cursor:not([style*="color: transparent"])': { color: 'var(--surface) !important' },
+    '&:not(.cm-focused) .cm-fat-cursor': { background: 'none', outline: '1px solid var(--fg)' },
+    // Vim shows every message in red, from "1 lines yanked" to an error, so show them all as text.
+    '.cm-vim-message': { color: 'var(--fg) !important' },
+    // A prompt's hint, like the one beside a search.
+    '.cm-vim-panel [style*="color"]:not(.cm-vim-message)': { color: 'var(--syntax-comment) !important' },
+  }),
+);
 
 /**
  * Edits a Source as HTML in CodeMirror. Rendered without a shadow root, so the
@@ -67,16 +91,30 @@ export class SourceEditor extends LitElement {
   /** The text size, in px. */
   @property({ type: Number }) textSize = 14;
 
+  /** Whether the editor takes Vim's keys and modes. */
+  @property({ type: Boolean }) vimMode = false;
+
   #wordWrapCompartment = new Compartment();
   #fontCompartment = new Compartment();
+  #vimCompartment = new Compartment();
 
   #view?: EditorView;
 
   /** Set while `updated()` applies an outside `value`, which isn't an edit to report. */
   #applyingValue = false;
 
+  /** What last took focus in the editor: its text, or a Vim prompt. */
+  #lastFocused: EventTarget | null = null;
+
   protected createRenderRoot() {
     return this;
+  }
+
+  constructor() {
+    super();
+    this.addEventListener('focusin', (event) => {
+      this.#lastFocused = event.target;
+    });
   }
 
   connectedCallback() {
@@ -85,6 +123,8 @@ export class SourceEditor extends LitElement {
       parent: this,
       doc: this.value,
       extensions: [
+        // Vim's keymap must come before the others, or theirs take its keys.
+        this.#vimCompartment.of(this.#vimExtension()),
         basicSetup,
         htmlLanguage(),
         syntaxHighlighting(highlightStyle),
@@ -112,6 +152,21 @@ export class SourceEditor extends LitElement {
   }
 
   /**
+   * Vim gives focus back to the text when an error replaces its `:` prompt
+   * only if `document.activeElement` was in the prompt; inside a shadow root
+   * it's the host instead, so focus would fall to the page. So if what had
+   * focus here has gone, give it back.
+   */
+  #onVimDialog = () => {
+    if (this.#lastFocused instanceof Node && !this.#lastFocused.isConnected) this.#view?.focus();
+  };
+
+  #vimExtension() {
+    // Of themes with the same precedence, the first wins.
+    return this.vimMode ? [vimTheme, vim()] : [];
+  }
+
+  /**
    * The text's size and font, as a theme of their own: CodeMirror measures
    * every line again when its theme changes, but not when a CSS variable
    * does, and until it does the line numbers stay where the lines were.
@@ -128,6 +183,10 @@ export class SourceEditor extends LitElement {
   protected updated(changed: Map<PropertyKey, unknown>) {
     if (changed.has('textSize') || changed.has('systemFont')) {
       this.#view?.dispatch({ effects: this.#fontCompartment.reconfigure(this.#fontTheme()) });
+    }
+    if (changed.has('vimMode')) {
+      this.#view?.dispatch({ effects: this.#vimCompartment.reconfigure(this.#vimExtension()) });
+      if (this.#view) getCM(this.#view)?.on('dialog', this.#onVimDialog);
     }
     if (changed.has('wordWrap')) {
       this.#view?.dispatch({ effects: this.#wordWrapCompartment.reconfigure(this.#wordWrapExtension()) });

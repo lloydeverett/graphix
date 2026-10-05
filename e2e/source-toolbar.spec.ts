@@ -132,6 +132,135 @@ test('the Source is in Cascadia Mono, served from this site, unless Use system f
   await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
 });
 
+test('Vim mode edits the Source with Vim keys, and stays as set', async ({ editor, page }) => {
+  const vimMode = page.getByRole('menuitemcheckbox', { name: 'Vim mode' });
+  const source = () => page.locator('source-editor').evaluate((element) => (element as HTMLElement & { value: string }).value);
+  await editor.setSource('<p>one</p>\n<p>two</p>');
+
+  // Off by default: typing inserts text.
+  await editor.sourceBox.click();
+  await page.keyboard.press('ControlOrMeta+Home');
+  await page.keyboard.type('dd');
+  await expect.poll(source).toBe('dd<p>one</p>\n<p>two</p>');
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(vimMode).not.toBeChecked();
+  await vimMode.click();
+  await editor.setSource('<p>one</p>\n<p>two</p>');
+  await editor.sourceBox.click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('g');
+  await page.keyboard.press('g');
+  await page.keyboard.type('dd');
+  await expect.poll(source).toBe('<p>two</p>');
+  await page.keyboard.type('u');
+  await expect.poll(source).toBe('<p>one</p>\n<p>two</p>');
+
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await editor.sourceBox.click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.type('ggx');
+  await expect.poll(source).toBe('p>one</p>\n<p>two</p>');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(vimMode).toBeChecked();
+  await vimMode.click();
+  await editor.sourceBox.click();
+  await page.keyboard.type('x');
+  await expect.poll(source).toContain('x');
+});
+
+test("Vim mode's block cursor is the text's colour, with the letter under it in the background's", async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
+  await page.reload();
+  await editor.setSource('<p>one</p>');
+  await editor.sourceBox.click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('0');
+  const cursor = page.locator('source-editor .cm-fat-cursor');
+  const colours = () =>
+    cursor.evaluate((element) => {
+      const { backgroundColor, color } = getComputedStyle(element);
+      return { backgroundColor, color, letter: element.textContent };
+    });
+  const { fg, surface } = await page.evaluate(() => {
+    // The tokens as computed colours, to compare with the cursor's.
+    const probe = document.createElement('div');
+    document.body.append(probe);
+    const resolve = (token: string) => {
+      probe.style.color = `var(${token})`;
+      return getComputedStyle(probe).color;
+    };
+    const colours = { fg: resolve('--fg'), surface: resolve('--surface') };
+    probe.remove();
+    return colours;
+  });
+  await expect.poll(colours).toEqual({ backgroundColor: fg, color: surface, letter: '<' });
+
+  // While an operator waits, the cursor is half height, and Vim hides its letter.
+  await page.keyboard.press('d');
+  await expect.poll(async () => (await colours()).color).toBe('rgba(0, 0, 0, 0)');
+  await page.keyboard.press('Escape');
+  await expect.poll(colours).toEqual({ backgroundColor: fg, color: surface, letter: '<' });
+
+  // Unfocused, it's an outline, and the letter beneath shows through.
+  await page.getByRole('button', { name: 'Settings' }).focus();
+  await expect.poll(colours).toEqual({ backgroundColor: 'rgba(0, 0, 0, 0)', color: 'rgba(0, 0, 0, 0)', letter: '<' });
+});
+
+test("Vim mode's messages and prompt hints are in the theme's text colours, and an error leaves the editor focused", async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
+  await page.reload();
+  await editor.setSource('<p>one</p>');
+  await editor.sourceBox.click();
+  await page.keyboard.press('Escape');
+  const colourOf = (token: string) =>
+    page.evaluate((token) => {
+      const probe = document.createElement('div');
+      probe.style.color = `var(${token})`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    }, token);
+  const panel = page.locator('source-editor .cm-vim-panel');
+  const colour = (locator: typeof panel) => locator.evaluate((element) => getComputedStyle(element).color);
+
+  await page.keyboard.type('yy');
+  const message = panel.locator('.cm-vim-message');
+  await expect(message).toHaveText('1 lines yanked');
+  expect(await colour(message)).toBe(await colourOf('--fg'));
+
+  await page.keyboard.type(':nonsense');
+  await page.keyboard.press('Enter');
+  await expect(message).toContainText('Not an editor command');
+  expect(await colour(message)).toBe(await colourOf('--fg'));
+
+  // The editor keeps focus after the error, so Vim's keys still reach it.
+  await expect(editor.sourceBox).toBeFocused();
+  await page.keyboard.type('/');
+  const hint = panel.getByText(/regexp/);
+  await expect(hint).toBeVisible();
+  expect(await colour(hint)).toBe(await colourOf('--syntax-comment'));
+});
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test.describe(`in ${colorScheme} mode`, () => {
+    test.use({ colorScheme });
+    test("Vim mode's block cursor follows the theme", async ({ editor, page }) => {
+      await page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
+      await page.reload();
+      await editor.sourceBox.click();
+      await page.keyboard.press('Escape');
+      const background = await page
+        .locator('source-editor .cm-fat-cursor')
+        .evaluate((element) => getComputedStyle(element).backgroundColor);
+      const text = await editor.sourceBox.evaluate((element) => getComputedStyle(element).color);
+      expect(background).toBe(text);
+    });
+  });
+}
+
 test('the text size can be stepped up and down, keeping the menu open, and stays as set', async ({ editor, page }) => {
   const menu = page.getByRole('menu', { name: 'Settings' });
   const smaller = page.getByRole('menuitem', { name: 'Smaller text' });
@@ -228,6 +357,8 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await expect(wordWrap).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitemcheckbox', { name: 'Use system font' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Vim mode' })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: 'Smaller text' })).toBeFocused();
   await page.keyboard.press('End');
