@@ -6,7 +6,7 @@ import './preview-pane.js';
 // Parcel drops a type-only import entirely, so import for the side effect too.
 import './source-editor.js';
 import './split-pane.js';
-import { type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
+import { DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import type { MenuItem } from './context-menu.js';
 import { icon } from './icon.js';
 import type { PreviewPane } from './preview-pane.js';
@@ -38,85 +38,31 @@ const EXAMPLE_SOURCE = `<h1>Hello, graphix</h1>
 </gx-mermaid>
 `;
 
-function loadSource(): string {
+/**
+ * The value kept in localStorage under `key`, or `fallback` if there's none,
+ * `parse` rejects it (by returning undefined), or storage is unavailable.
+ */
+function load<T>(key: string, parse: (saved: string) => T | undefined, fallback: T): T {
   try {
-    return localStorage.getItem(SOURCE_STORAGE_KEY) ?? EXAMPLE_SOURCE;
+    const saved = localStorage.getItem(key);
+    return (saved === null ? undefined : parse(saved)) ?? fallback;
   } catch {
-    return EXAMPLE_SOURCE;
+    return fallback;
   }
 }
 
-function saveSource(source: string) {
+/** Keeps `value` in localStorage under `key`. */
+function save(key: string, value: string | number | boolean) {
   try {
-    localStorage.setItem(SOURCE_STORAGE_KEY, source);
+    localStorage.setItem(key, String(value));
   } catch {
-    // Storage unavailable (e.g. private mode); the Source just won't persist.
+    // Storage unavailable (e.g. private mode); it just won't persist.
   }
 }
 
-function loadBaseStyle(): BaseStyleId {
-  try {
-    const saved = localStorage.getItem(BASE_STYLE_STORAGE_KEY);
-    return isBaseStyleId(saved) ? saved : DEFAULT_BASE_STYLE;
-  } catch {
-    return DEFAULT_BASE_STYLE;
-  }
-}
-
-function saveBaseStyle(baseStyle: BaseStyleId) {
-  try {
-    localStorage.setItem(BASE_STYLE_STORAGE_KEY, baseStyle);
-  } catch {
-    // Storage unavailable; the Base Style just won't persist.
-  }
-}
-
-function loadWordWrap(): boolean {
-  try {
-    return localStorage.getItem(WORD_WRAP_STORAGE_KEY) !== 'false';
-  } catch {
-    return true;
-  }
-}
-
-function saveWordWrap(wordWrap: boolean) {
-  try {
-    localStorage.setItem(WORD_WRAP_STORAGE_KEY, String(wordWrap));
-  } catch {
-    // Storage unavailable; the setting just won't persist.
-  }
-}
-
-function loadSystemFont(): boolean {
-  try {
-    return localStorage.getItem(SYSTEM_FONT_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function saveSystemFont(systemFont: boolean) {
-  try {
-    localStorage.setItem(SYSTEM_FONT_STORAGE_KEY, String(systemFont));
-  } catch {
-    // Storage unavailable; the setting just won't persist.
-  }
-}
-
-function loadVimMode(): boolean {
-  try {
-    return localStorage.getItem(VIM_MODE_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function saveVimMode(vimMode: boolean) {
-  try {
-    localStorage.setItem(VIM_MODE_STORAGE_KEY, String(vimMode));
-  } catch {
-    // Storage unavailable; the setting just won't persist.
-  }
+/** A setting that's on or off, kept in localStorage under `key`. */
+function loadFlag(key: string, fallback: boolean): boolean {
+  return load(key, (saved) => (saved === 'true' ? true : saved === 'false' ? false : undefined), fallback);
 }
 
 /**
@@ -127,21 +73,9 @@ function defaultTextSize(): number {
   return matchMedia('(pointer: coarse)').matches ? 16 : 14;
 }
 
-function loadTextSize(): number {
-  try {
-    const saved = Number(localStorage.getItem(TEXT_SIZE_STORAGE_KEY) ?? NaN);
-    return saved >= MIN_TEXT_SIZE && saved <= MAX_TEXT_SIZE ? saved : defaultTextSize();
-  } catch {
-    return defaultTextSize();
-  }
-}
-
-function saveTextSize(textSize: number) {
-  try {
-    localStorage.setItem(TEXT_SIZE_STORAGE_KEY, String(textSize));
-  } catch {
-    // Storage unavailable; the setting just won't persist.
-  }
+function parseTextSize(saved: string): number | undefined {
+  const textSize = Number(saved);
+  return textSize >= MIN_TEXT_SIZE && textSize <= MAX_TEXT_SIZE ? textSize : undefined;
 }
 
 @customElement('graphix-app')
@@ -210,22 +144,26 @@ export class GraphixApp extends LitElement {
   ];
 
   /** The Source as typed. */
-  @state() source = loadSource();
+  @state() source = load(SOURCE_STORAGE_KEY, (saved) => saved, EXAMPLE_SOURCE);
 
   /** The Base Style the Preview is shown with. */
-  @state() baseStyle = loadBaseStyle();
+  @state() baseStyle = load(
+    BASE_STYLE_STORAGE_KEY,
+    (saved) => (isBaseStyleId(saved) ? saved : undefined),
+    DEFAULT_BASE_STYLE,
+  );
 
   /** Whether long lines in the Source wrap. */
-  @state() wordWrap = loadWordWrap();
+  @state() wordWrap = loadFlag(WORD_WRAP_STORAGE_KEY, true);
 
   /** Whether the Source is shown in the system's monospace font, rather than Cascadia Mono. */
-  @state() systemFont = loadSystemFont();
+  @state() systemFont = loadFlag(SYSTEM_FONT_STORAGE_KEY, false);
 
   /** The Source's text size, in px. */
-  @state() textSize = loadTextSize();
+  @state() textSize = load(TEXT_SIZE_STORAGE_KEY, parseTextSize, defaultTextSize());
 
   /** Whether the Source is edited with Vim's keys and modes. */
-  @state() vimMode = loadVimMode();
+  @state() vimMode = loadFlag(VIM_MODE_STORAGE_KEY, false);
 
   #settingsIcon = icon(Settings);
   #smallerIcon = icon(Minus);
@@ -269,32 +207,32 @@ export class GraphixApp extends LitElement {
 
   #onInput(event: Event) {
     this.source = (event.target as SourceEditor).value;
-    saveSource(this.source);
+    save(SOURCE_STORAGE_KEY, this.source);
   }
 
   #onBaseStyleChange(event: Event) {
     this.baseStyle = (event.target as PreviewPane).baseStyle;
-    saveBaseStyle(this.baseStyle);
+    save(BASE_STYLE_STORAGE_KEY, this.baseStyle);
   }
 
   #onWordWrapSelect(event: Event) {
     this.wordWrap = (event.target as MenuItem).checked;
-    saveWordWrap(this.wordWrap);
+    save(WORD_WRAP_STORAGE_KEY, this.wordWrap);
   }
 
   #onSystemFontSelect(event: Event) {
     this.systemFont = (event.target as MenuItem).checked;
-    saveSystemFont(this.systemFont);
+    save(SYSTEM_FONT_STORAGE_KEY, this.systemFont);
   }
 
   #onVimModeSelect(event: Event) {
     this.vimMode = (event.target as MenuItem).checked;
-    saveVimMode(this.vimMode);
+    save(VIM_MODE_STORAGE_KEY, this.vimMode);
   }
 
   #stepTextSize(step: number) {
     this.textSize += step;
-    saveTextSize(this.textSize);
+    save(TEXT_SIZE_STORAGE_KEY, this.textSize);
   }
 
   render() {

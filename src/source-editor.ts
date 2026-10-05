@@ -153,8 +153,9 @@ export class SourceEditor extends LitElement {
 
   /**
    * Vim gives focus back to the text when an error replaces its `:` prompt
-   * only if `document.activeElement` was in the prompt; inside a shadow root
-   * it's the host instead, so focus would fall to the page. So if what had
+   * only if `document.activeElement` was in the prompt; but the editor is
+   * inside graphix-app's shadow root, so that's graphix-app, and focus would
+   * fall to the page. So if what had
    * focus here has gone, give it back.
    */
   #onVimDialog = () => {

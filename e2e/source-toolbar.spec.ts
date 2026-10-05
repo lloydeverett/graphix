@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures.js';
+import { type Editor, expect, test } from './fixtures.js';
 
 const LONG_LINE = `<p>${'word '.repeat(200)}</p>`;
 
@@ -132,6 +132,27 @@ test('the Source is in Cascadia Mono, served from this site, unless Use system f
   await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
 });
 
+/** Reopens the editor with Vim mode on, and the Source set to `source` if given, focused in Normal mode. */
+async function startInVimMode(editor: Editor, source?: string) {
+  await editor.page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
+  await editor.page.reload();
+  if (source !== undefined) await editor.setSource(source);
+  await editor.sourceBox.click();
+  await editor.page.keyboard.press('Escape');
+}
+
+/** The colour a theme.css token computes to, as getComputedStyle gives it. */
+async function tokenColour(page: Page, token: string) {
+  return page.evaluate((token) => {
+    const probe = document.createElement('div');
+    probe.style.color = `var(${token})`;
+    document.body.append(probe);
+    const colour = getComputedStyle(probe).color;
+    probe.remove();
+    return colour;
+  }, token);
+}
+
 test('Vim mode edits the Source with Vim keys, and stays as set', async ({ editor, page }) => {
   const vimMode = page.getByRole('menuitemcheckbox', { name: 'Vim mode' });
   const source = () => page.locator('source-editor').evaluate((element) => (element as HTMLElement & { value: string }).value);
@@ -171,11 +192,7 @@ test('Vim mode edits the Source with Vim keys, and stays as set', async ({ edito
 });
 
 test("Vim mode's block cursor is the text's colour, with the letter under it in the background's", async ({ editor, page }) => {
-  await page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
-  await page.reload();
-  await editor.setSource('<p>one</p>');
-  await editor.sourceBox.click();
-  await page.keyboard.press('Escape');
+  await startInVimMode(editor, '<p>one</p>');
   await page.keyboard.press('0');
   const cursor = page.locator('source-editor .cm-fat-cursor');
   const colours = () =>
@@ -183,18 +200,8 @@ test("Vim mode's block cursor is the text's colour, with the letter under it in 
       const { backgroundColor, color } = getComputedStyle(element);
       return { backgroundColor, color, letter: element.textContent };
     });
-  const { fg, surface } = await page.evaluate(() => {
-    // The tokens as computed colours, to compare with the cursor's.
-    const probe = document.createElement('div');
-    document.body.append(probe);
-    const resolve = (token: string) => {
-      probe.style.color = `var(${token})`;
-      return getComputedStyle(probe).color;
-    };
-    const colours = { fg: resolve('--fg'), surface: resolve('--surface') };
-    probe.remove();
-    return colours;
-  });
+  const fg = await tokenColour(page, '--fg');
+  const surface = await tokenColour(page, '--surface');
   await expect.poll(colours).toEqual({ backgroundColor: fg, color: surface, letter: '<' });
 
   // While an operator waits, the cursor is half height, and Vim hides its letter.
@@ -209,49 +216,33 @@ test("Vim mode's block cursor is the text's colour, with the letter under it in 
 });
 
 test("Vim mode's messages and prompt hints are in the theme's text colours, and an error leaves the editor focused", async ({ editor, page }) => {
-  await page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
-  await page.reload();
-  await editor.setSource('<p>one</p>');
-  await editor.sourceBox.click();
-  await page.keyboard.press('Escape');
-  const colourOf = (token: string) =>
-    page.evaluate((token) => {
-      const probe = document.createElement('div');
-      probe.style.color = `var(${token})`;
-      document.body.append(probe);
-      const colour = getComputedStyle(probe).color;
-      probe.remove();
-      return colour;
-    }, token);
+  await startInVimMode(editor, '<p>one</p>');
   const panel = page.locator('source-editor .cm-vim-panel');
   const colour = (locator: typeof panel) => locator.evaluate((element) => getComputedStyle(element).color);
 
   await page.keyboard.type('yy');
   const message = panel.locator('.cm-vim-message');
   await expect(message).toHaveText('1 lines yanked');
-  expect(await colour(message)).toBe(await colourOf('--fg'));
+  expect(await colour(message)).toBe(await tokenColour(page, '--fg'));
 
   await page.keyboard.type(':nonsense');
   await page.keyboard.press('Enter');
   await expect(message).toContainText('Not an editor command');
-  expect(await colour(message)).toBe(await colourOf('--fg'));
+  expect(await colour(message)).toBe(await tokenColour(page, '--fg'));
 
   // The editor keeps focus after the error, so Vim's keys still reach it.
   await expect(editor.sourceBox).toBeFocused();
   await page.keyboard.type('/');
   const hint = panel.getByText(/regexp/);
   await expect(hint).toBeVisible();
-  expect(await colour(hint)).toBe(await colourOf('--syntax-comment'));
+  expect(await colour(hint)).toBe(await tokenColour(page, '--syntax-comment'));
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`in ${colorScheme} mode`, () => {
     test.use({ colorScheme });
     test("Vim mode's block cursor follows the theme", async ({ editor, page }) => {
-      await page.evaluate(() => localStorage.setItem('graphix:vim-mode', 'true'));
-      await page.reload();
-      await editor.sourceBox.click();
-      await page.keyboard.press('Escape');
+      await startInVimMode(editor);
       const background = await page
         .locator('source-editor .cm-fat-cursor')
         .evaluate((element) => getComputedStyle(element).backgroundColor);
