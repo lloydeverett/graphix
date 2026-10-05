@@ -12,13 +12,21 @@ async function chooseBaseStyle(editor: Editor, id: string) {
 const bodyBackground = (editor: Editor) =>
   editor.inPreview(() => getComputedStyle(document.body).backgroundColor);
 
-test('sits just left of Refresh, starting on default', async ({ editor, page }) => {
+test('sits just left of Refresh, starting on water.css', async ({ editor, page }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
-  await expect(picker(page)).toHaveValue('default');
+  await expect(picker(page)).toHaveValue('water.css');
   const pickerBox = (await picker(page).boundingBox())!;
   const refreshBox = (await page.getByRole('button', { name: 'Refresh' }).boundingBox())!;
   expect(refreshBox.x - (pickerBox.x + pickerBox.width)).toBeGreaterThanOrEqual(0);
   expect(refreshBox.x - (pickerBox.x + pickerBox.width)).toBeLessThan(12);
+});
+
+test('lists water.css first, then its light and dark variants', async ({ editor, page }) => {
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  const ids = await picker(page).locator('option').evaluateAll((options) =>
+    options.map((option) => (option as HTMLOptionElement).value),
+  );
+  expect(ids.slice(0, 3)).toEqual(['water.css', 'water.css-light', 'water.css-dark']);
 });
 
 test('restyles the Preview in place, and keeps the choice', async ({ editor, page }) => {
@@ -42,8 +50,8 @@ test('restyles the Preview in place, and keeps the choice', async ({ editor, pag
   expect(await bodyBackground(editor)).toBe('rgb(32, 43, 56)');
 });
 
-test('default is water.css, dark or light to match the colour scheme', async ({ editor, page }) => {
-  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+test('water.css is the default, dark or light to match the colour scheme', async ({ editor, page }) => {
+  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'water.css');
   // water.css-light's background is #fff, and water.css-dark's #202b38.
   expect(await bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 
@@ -51,7 +59,7 @@ test('default is water.css, dark or light to match the colour scheme', async ({ 
   await expect.poll(() => bodyBackground(editor)).toBe('rgb(32, 43, 56)');
 
   await page.reload();
-  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'water.css');
   await expect.poll(() => bodyBackground(editor)).toBe('rgb(32, 43, 56)');
 
   // With no preference, it's light.
@@ -59,11 +67,11 @@ test('default is water.css, dark or light to match the colour scheme', async ({ 
   await expect.poll(() => bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 });
 
-test('starts on default when the saved Base Style is gone', async ({ editor, page }) => {
+test('starts on water.css when the saved Base Style is gone', async ({ editor, page }) => {
   await page.evaluate(() => localStorage.setItem('graphix:base-style', 'graphix'));
   await page.reload();
-  await expect(picker(page)).toHaveValue('default');
-  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+  await expect(picker(page)).toHaveValue('water.css');
+  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'water.css');
 });
 
 test('"HTML only" leaves the browser defaults', async ({ editor }) => {
@@ -73,7 +81,7 @@ test('"HTML only" leaves the browser defaults', async ({ editor }) => {
 
   expect(await bodyBackground(editor)).toBe('rgba(0, 0, 0, 0)');
 
-  await chooseBaseStyle(editor, 'default');
+  await chooseBaseStyle(editor, 'water.css');
   expect(await bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 });
 
@@ -82,7 +90,7 @@ test.describe('when a Base Style fails to load', () => {
 
   test('keeps the one it has', async ({ editor, page }) => {
     await expect(editor.preview.locator('h1')).toBeVisible();
-    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'water.css');
     // Dev builds add a query string.
     const sakura = /\/sakura\.[^/?]*css(\?|$)/;
     await page.route(sakura, (route) => route.abort());
@@ -90,7 +98,7 @@ test.describe('when a Base Style fails to load', () => {
     const failed = page.waitForEvent('requestfailed', (request) => sakura.test(request.url()));
     await picker(page).selectOption('sakura');
     await failed;
-    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'default');
+    await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'water.css');
     expect(await bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 
     // And can still change to another.
@@ -134,7 +142,7 @@ test('shows the Source only once its Base Style has loaded', async ({ editor, pa
   const firstBaseStyle = await editor.inPreview(
     () => (window as unknown as { graphixFirstBaseStyle?: string }).graphixFirstBaseStyle,
   );
-  expect(firstBaseStyle).toBe('default');
+  expect(firstBaseStyle).toBe('water.css');
 });
 
 test('loads every Base Style from our own origin', async ({ editor, page }) => {

@@ -14,10 +14,12 @@ const DARK_SCHEME = '(prefers-color-scheme: dark)';
  */
 export const BASE_STYLE_SHEETS: Record<BaseStyleId, Stylesheet[]> = {
   // Follows the user's colour scheme as it changes.
-  default: [
+  'water.css': [
     { href: WATER_DARK, media: DARK_SCHEME },
     { href: WATER_LIGHT, media: `not all and ${DARK_SCHEME}` },
   ],
+  'water.css-light': [{ href: WATER_LIGHT }],
+  'water.css-dark': [{ href: WATER_DARK }],
   none: [],
   'awsm.css': [{ href: new URL('./base-styles/awsm.css', import.meta.url).href }],
   bahunya: [{ href: new URL('./base-styles/bahunya.css', import.meta.url).href }],
@@ -35,8 +37,6 @@ export const BASE_STYLE_SHEETS: Record<BaseStyleId, Stylesheet[]> = {
   'simple.css': [{ href: new URL('./base-styles/simple.css', import.meta.url).href }],
   tacit: [{ href: new URL('./base-styles/tacit.css', import.meta.url).href }],
   thebestmotherfucking: [{ href: new URL('./base-styles/thebestmotherfucking.css', import.meta.url).href }],
-  'water.css-dark': [{ href: WATER_DARK }],
-  'water.css-light': [{ href: WATER_LIGHT }],
   writ: [{ href: new URL('./base-styles/writ.css', import.meta.url).href }],
   yorha: [{ href: new URL('./base-styles/yorha.css', import.meta.url).href }],
 };

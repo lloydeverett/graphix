@@ -57,7 +57,7 @@ needs; nothing in your HTML can reach it.) Edits update the preview in place; **
 The menu beside Refresh picks the preview's base stylesheet, from the classless
 ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
 `src/base-styles/README.md` lists their sources and licenses. It starts on
-**default**: water.css, dark or light to match your colour scheme.
+**water.css** (the default): dark or light to match your colour scheme.
 The gear above the editor opens its settings: turn **Word wrap** off to scroll
 long lines sideways instead, or **Vim mode** on to edit with Vim's keys.
 Settings are kept in the browser, like your HTML.
