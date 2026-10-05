@@ -35,7 +35,6 @@ export const BASE_STYLE_SHEETS: Record<BaseStyleId, Stylesheet[]> = {
   'simple.css': [{ href: new URL('./base-styles/simple.css', import.meta.url).href }],
   tacit: [{ href: new URL('./base-styles/tacit.css', import.meta.url).href }],
   thebestmotherfucking: [{ href: new URL('./base-styles/thebestmotherfucking.css', import.meta.url).href }],
-  tufte: [{ href: new URL('./base-styles/tufte.css', import.meta.url).href }],
   'water.css-dark': [{ href: WATER_DARK }],
   'water.css-light': [{ href: WATER_LIGHT }],
   writ: [{ href: new URL('./base-styles/writ.css', import.meta.url).href }],

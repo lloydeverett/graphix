@@ -23,7 +23,6 @@ export const BASE_STYLES = [
   { id: 'simple.css', label: 'simple.css' },
   { id: 'tacit', label: 'tacit' },
   { id: 'thebestmotherfucking', label: 'thebestmotherfucking' },
-  { id: 'tufte', label: 'tufte' },
   { id: 'water.css-dark', label: 'water.css-dark' },
   { id: 'water.css-light', label: 'water.css-light' },
   { id: 'writ', label: 'writ' },

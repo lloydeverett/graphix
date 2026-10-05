@@ -23,7 +23,6 @@ that survives minification.
 | `simple.css` | 2.3.7 | [npm: simpledotcss](https://www.npmjs.com/package/simpledotcss) | MIT |
 | `tacit.css` | 1.9.7 | [npm: tacit-css](https://www.npmjs.com/package/tacit-css) | MIT |
 | `thebestmotherfucking.css` | as on cssbed.com | [denysvitali/thebestmotherfuckingwebsite](https://github.com/denysvitali/thebestmotherfuckingwebsite) | WTFPL or MIT |
-| `tufte.css`, `et-book/` | 1.9.0 | [npm: tufte-css](https://www.npmjs.com/package/tufte-css), fonts from [edwardtufte/et-book](https://github.com/edwardtufte/et-book) | MIT; only the woff fonts are kept |
 | `water.css-dark.css`, `water.css-light.css` | 2.1.1 | [npm: water.css](https://www.npmjs.com/package/water.css) | MIT |
 | `writ.css` | 1.0.4 | [programble/writ](https://github.com/programble/writ) | ISC |
 | `yorha.css` | 1.2.0 | [npm: yorha](https://www.npmjs.com/package/yorha) | MIT |

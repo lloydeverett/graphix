@@ -95,7 +95,7 @@ test.describe('when a Base Style fails to load', () => {
 
     // And can still change to another.
     await page.unroute(sakura);
-    await chooseBaseStyle(editor, 'tufte');
+    await chooseBaseStyle(editor, 'writ');
   });
 });
 
@@ -146,8 +146,6 @@ test('loads every Base Style from our own origin', async ({ editor, page }) => {
     if (url.protocol !== 'data:' && url.origin !== origin) elsewhere.push(url.href);
   });
 
-  // Text in Tufte's fonts, so they load too.
-  await editor.setSource('<h1>Heading</h1><p>Some <em>text</em> and <strong>more</strong>.</p>');
   const ids = await picker(page).locator('option').evaluateAll((options) =>
     options.map((option) => (option as HTMLOptionElement).value),
   );
