@@ -2,7 +2,8 @@ import { select } from 'd3-selection';
 import { type D3ZoomEvent, type ZoomBehavior, type ZoomTransform, zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
 import { LitElement, css, html } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
-import { Maximize, Minus, Plus, createElement } from 'lucide';
+import { Maximize, Minus, Plus } from 'lucide';
+import { icon } from './icon.js';
 
 const ZOOM_STEP = 1.25;
 /** How far the user can zoom out and in; fitting may go further out. */
@@ -12,10 +13,10 @@ const MAX_ZOOM = 8;
 const PAN_STEP = 40;
 /** How far the pointer may move during a click before it counts as a drag. */
 const CLICK_DISTANCE = 4;
-/** The most one wheel event may zoom, as a power of 2 (about 1.4×). */
-const MAX_WHEEL_ZOOM = 0.5;
-
-const icon = (node: typeof Plus) => createElement(node, { width: 16, height: 16, 'aria-hidden': 'true' });
+/** The most one wheel event may zoom, as a power of 2 (0.5, about 1.4×). */
+const MAX_WHEEL_ZOOM_LOG2 = 0.5;
+/** Where a press is the content's own, to select text or move a caret, rather than to pan. */
+const FIELDS = 'input, textarea, select, [contenteditable]';
 
 type ZoomEvent = D3ZoomEvent<HTMLElement, unknown>;
 type Point = { x: number; y: number };
@@ -70,15 +71,16 @@ export class GxPan extends LitElement {
       outline-offset: 2px;
     }
 
+    /* No width, so it shrinks to fit within the view, as an absolute box
+       does: text and tables wrap at its width, while anything wider that
+       can't shrink (a Tree) widens the content, which is then fitted. Not
+       max-content, which leaves prose on one long line, and gives a table
+       that is 100% wide with a fixed layout (as water.css's are) a million
+       pixels. */
     .content {
       position: absolute;
       top: 0;
       left: 0;
-      /* Shrinks to fit within the view, as an absolute box does: text and
-         tables wrap at its width, while anything wider that can't shrink
-         (a Tree) widens the content, which is then fitted. Not max-content,
-         which leaves prose on one long line, and gives a table that is 100%
-         wide with a fixed layout (as water.css's are) a million pixels. */
       transform-origin: 0 0;
     }
 
@@ -117,16 +119,22 @@ export class GxPan extends LitElement {
   #zoom: ZoomBehavior<HTMLElement, unknown> = zoom<HTMLElement, unknown>()
     .scaleExtent([MIN_ZOOM, MAX_ZOOM])
     .clickDistance(CLICK_DISTANCE)
-    // A plain scroll scrolls the page; only ctrl/⌘-scroll (or a pinch) zooms.
-    .filter((event: MouseEvent) =>
-      event.type === 'wheel' ? event.ctrlKey || event.metaKey : !event.ctrlKey && !event.button,
-    )
+    .filter((event: MouseEvent) => {
+      // A plain scroll scrolls the page; only ctrl/⌘-scroll (or a pinch) zooms.
+      if (event.type === 'wheel') return event.ctrlKey || event.metaKey;
+      if (event.ctrlKey || event.button) return false;
+      // d3 stops the browser selecting text from any press it takes, so leave
+      // it the second press of a double-click, which selects a word as
+      // anywhere else, and presses in a field.
+      if (event.type === 'mousedown' && event.detail > 1) return false;
+      return !(event.target as Element).closest(FIELDS);
+    })
     // d3's own scaling, times 10 for a ctrl-scroll, as a pinch's small steps
     // need; but capped, so a mouse wheel's large ones don't zoom in many times
     // over at once.
     .wheelDelta((event: WheelEvent) => {
       const delta = -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002) * 10;
-      return Math.max(-MAX_WHEEL_ZOOM, Math.min(MAX_WHEEL_ZOOM, delta));
+      return Math.max(-MAX_WHEEL_ZOOM_LOG2, Math.min(MAX_WHEEL_ZOOM_LOG2, delta));
     })
     .on('start', (event: ZoomEvent) => {
       const point = pointOf(event.sourceEvent);
@@ -154,6 +162,10 @@ export class GxPan extends LitElement {
       if (press) select(this.view).call(this.#zoom.transform, press.transform);
     });
 
+  #zoomInIcon = icon(Plus);
+  #zoomOutIcon = icon(Minus);
+  #fitIcon = icon(Maximize);
+
   /** Whether the user has panned or zoomed since the content was last fitted. */
   #moved = false;
 
@@ -176,7 +188,7 @@ export class GxPan extends LitElement {
   }
 
   firstUpdated() {
-    // Double-clicking selects a word, as anywhere else, rather than zooming.
+    // Double-clicking (or double-tapping) selects a word, rather than zooming.
     select(this.view).call(this.#zoom).on('dblclick.zoom', null);
     this.#observe();
   }
@@ -246,12 +258,12 @@ export class GxPan extends LitElement {
       </div>
       <div class="controls">
         <button type="button" title="Zoom in" aria-label="Zoom in" @click=${() => this.#zoomBy(ZOOM_STEP)}>
-          ${icon(Plus)}
+          ${this.#zoomInIcon}
         </button>
         <button type="button" title="Zoom out" aria-label="Zoom out" @click=${() => this.#zoomBy(1 / ZOOM_STEP)}>
-          ${icon(Minus)}
+          ${this.#zoomOutIcon}
         </button>
-        <button type="button" title="Fit" aria-label="Fit" @click=${() => this.#fit()}>${icon(Maximize)}</button>
+        <button type="button" title="Fit" aria-label="Fit" @click=${() => this.#fit()}>${this.#fitIcon}</button>
       </div>
     `;
   }

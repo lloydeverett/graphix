@@ -41,12 +41,14 @@ window you can pan and zoom:
 </gx-pan>
 ```
 
-Drag to pan; pinch, or scroll with ctrl or ⌘ held, to zoom (a plain scroll
-still scrolls the page). Once focused, `+` and `-` zoom, `0` fits, and the
-arrow keys pan; the buttons in the corner zoom and fit too. The content is
-fitted to the window, never enlarged, until you move it. It's 24em tall unless
-you set a height. Links in it still work: only a drag doesn't follow them.
-Double-clicking selects text, as anywhere else, rather than zooming.
+Drag, or swipe on a touch screen, to pan; pinch, or scroll with ctrl or ⌘ held,
+to zoom (a plain scroll still scrolls the page, but a swipe over the window
+pans it). Once focused, `+` and `-` zoom, `0` fits, and the arrow keys pan; the
+buttons in the corner zoom and fit too. The content is fitted to the window,
+never enlarged, until you move it. It's 24em tall unless you set a height.
+Links in it still work: only a drag doesn't follow them. Double-clicking
+selects a word, as anywhere else, rather than zooming, and text fields in it
+work as usual.
 
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and

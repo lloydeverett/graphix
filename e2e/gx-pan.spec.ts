@@ -4,10 +4,12 @@ import { type Editor, expect, test, treeNodeSource } from './fixtures.js';
 const panned = (inner: string, heading = 'Title') =>
   `<h1>${heading}</h1>\n<gx-pan style="height: 240px">\n${inner}\n</gx-pan>`;
 
-/** A Tree too wide for the Preview at its natural size. */
-const WIDE_TREE = `<gx-tree-node label="Root">${Array.from({ length: 12 }, (_, i) =>
-  treeNodeSource(`Child number ${i + 1}`),
-).join('')}</gx-tree-node>`;
+/** A Tree too wide for the Preview at its natural size, with `extra` Source in its root. */
+const wideTree = (extra = '') =>
+  treeNodeSource('Root', Array.from({ length: 12 }, (_, i) => treeNodeSource(`Child number ${i + 1}`)).join('') + extra);
+const WIDE_TREE = wideTree();
+
+type Point = { x: number; y: number };
 
 const view = (editor: Editor) => editor.preview.locator('gx-pan .view').first();
 const content = (editor: Editor) => editor.preview.locator('gx-pan .content').first();
@@ -20,12 +22,12 @@ function transformOf(editor: Editor) {
   });
 }
 
-async function centreOf(editor: Editor) {
+async function centreOf(editor: Editor): Promise<Point> {
   const box = await view(editor).boundingBox();
   return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
 }
 
-async function drag(editor: Editor, from: { x: number; y: number }, by: { x: number; y: number }) {
+async function drag(editor: Editor, from: Point, by: Point) {
   const { mouse } = editor.page;
   await mouse.move(from.x, from.y);
   await mouse.down();
@@ -98,7 +100,7 @@ test('zooms around the pointer with ctrl-scroll, and leaves a plain scroll to th
   await editor.setSource(panned(WIDE_TREE));
   const before = await fitted(editor, (k) => expect(k).toBeLessThan(1));
   const viewBox = (await view(editor).boundingBox())!;
-  const pointer = { x: viewBox.x + 100, y: viewBox.y + 80 };
+  const pointer: Point = { x: viewBox.x + 100, y: viewBox.y + 80 };
   await page.mouse.move(pointer.x, pointer.y);
 
   await page.mouse.wheel(0, -200);
@@ -146,6 +148,60 @@ test('moves nothing on a click that wobbles a little, and keeps fitting', async 
   await editor.setSource(panned(WIDE_TREE));
   await fitted(editor, (k) => expect(k).toBeLessThan(1));
   expect(await editor.isMarked('gx-pan')).toBe(true);
+});
+
+test('selects a word on a double-click, without moving', async ({ editor }) => {
+  await editor.setSource(panned('<p style="margin: 0">hello wonderful world</p>'));
+  const fit = await fitted(editor, (k) => expect(k).toBe(1));
+
+  await editor.preview.getByText('hello wonderful world').dblclick();
+  expect(await editor.inPreview(() => getSelection()?.toString())).toMatch(/^(hello|wonderful|world)$/);
+  expect(await transformOf(editor)).toEqual(fit);
+});
+
+test('selects text in a field by dragging, rather than panning', async ({ editor }) => {
+  await editor.setSource(panned('<input aria-label="Name" value="some text to select">'));
+  const fit = await fitted(editor, (k) => expect(k).toBe(1));
+  const box = (await editor.preview.getByRole('textbox', { name: 'Name' }).boundingBox())!;
+
+  await drag(editor, { x: box.x + 4, y: box.y + box.height / 2 }, { x: box.width - 8, y: 0 });
+  expect(await transformOf(editor)).toEqual(fit);
+  const selected = await editor.preview
+    .getByRole('textbox', { name: 'Name' })
+    .evaluate((input: HTMLInputElement) => input.value.slice(input.selectionStart!, input.selectionEnd!));
+  expect(selected.length).toBeGreaterThan(4);
+});
+
+test('is 24em tall unless given a height', async ({ editor }) => {
+  await editor.setSource('<gx-pan><p>content</p></gx-pan>');
+  const pan = editor.preview.locator('gx-pan');
+  await expect(pan).toBeVisible();
+  const em = await pan.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  await expect(pan).toHaveCSS('height', `${24 * em}px`);
+});
+
+test('shows a Diagram across the view, once it is drawn', async ({ editor }) => {
+  const wide = Array.from({ length: 10 }, (_, i) => `N${i}[Node number ${i}]`).join(' --> ');
+  await editor.setSource(panned(`<gx-mermaid>\nflowchart LR\n  ${wide}\n</gx-mermaid>`));
+  await expect(editor.diagram).toContainText('Node number 9');
+
+  // Drawn across the view, not collapsed, and all of it inside.
+  await expect(async () => {
+    const [viewBox, diagramBox] = await Promise.all([view(editor).boundingBox(), editor.diagram.boundingBox()]);
+    expect(diagramBox!.width).toBeGreaterThan(viewBox!.width * 0.9);
+    expect(diagramBox!.x).toBeGreaterThanOrEqual(viewBox!.x - 1);
+    expect(diagramBox!.x + diagramBox!.width).toBeLessThanOrEqual(viewBox!.x + viewBox!.width + 1);
+    expect(diagramBox!.y).toBeGreaterThanOrEqual(viewBox!.y - 1);
+    expect(diagramBox!.y + diagramBox!.height).toBeLessThanOrEqual(viewBox!.y + viewBox!.height + 1);
+  }).toPass();
+});
+
+test('follows a link in a Tree Node on a click', async ({ editor }) => {
+  await editor.setSource(panned(treeNodeSource('Root', treeNodeSource('Child', '<a href="#child">a link</a>'))));
+  await fitted(editor, (k) => expect(k).toBeLessThanOrEqual(1));
+
+  await editor.preview.getByRole('link', { name: 'a link' }).click();
+  await expect.poll(() => editor.inPreview(() => location.hash)).toBe('#child');
 });
 
 test('leaves keys pressed in its content to the content', async ({ editor, page }) => {
@@ -209,6 +265,20 @@ test('keeps the pan and zoom through edits, until a Refresh', async ({ editor, p
   await expect.poll(() => transformOf(editor)).toEqual(fit);
 });
 
+test('keeps the pan and zoom through edits to itself and its content', async ({ editor }) => {
+  const source = (height: number, extra = '') =>
+    `<gx-pan style="height: ${height}px">\n${wideTree(extra)}\n</gx-pan>`;
+  await editor.setSource(source(240));
+  await fitted(editor, (k) => expect(k).toBeLessThan(1));
+  await drag(editor, await centreOf(editor), { x: 60, y: 40 });
+  const moved = await transformOf(editor);
+
+  await editor.setSource(source(260, treeNodeSource('Added')));
+  await expect(editor.preview.locator('gx-tree-node[label="Added"] .card').first()).toBeVisible();
+  await expect(editor.preview.locator('gx-pan')).toHaveCSS('height', '260px');
+  expect(await transformOf(editor)).toEqual(moved);
+});
+
 test('zooming leaves a Tree laid out as it was', async ({ editor }) => {
   await editor.setSource(panned(WIDE_TREE));
   const fit = await fitted(editor, (k) => expect(k).toBeLessThan(1));
@@ -221,4 +291,40 @@ test('zooming leaves a Tree laid out as it was', async ({ editor }) => {
   await editor.preview.getByRole('button', { name: 'Zoom in' }).click();
   await expect.poll(async () => (await transformOf(editor)).k).toBeGreaterThan(fit.k);
   expect(await layout()).toEqual(before);
+});
+
+test.describe('on a touch screen', () => {
+  test.use({ viewport: { width: 390, height: 664 }, isMobile: true, hasTouch: true });
+
+  /** Moves fingers from `from` to `to` in steps; Playwright can only tap, so through Chromium directly. */
+  async function touch(editor: Editor, from: Point[], to: Point[]) {
+    const cdp = await editor.page.context().newCDPSession(editor.page);
+    const at = (t: number) => from.map((p, i) => ({ x: p.x + (to[i]!.x - p.x) * t, y: p.y + (to[i]!.y - p.y) * t }));
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(0) });
+    for (let step = 1; step <= 10; step++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(step / 10) });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
+
+  test('pans with one finger', async ({ editor }) => {
+    await editor.setSource(panned(WIDE_TREE));
+    const before = await fitted(editor, (k) => expect(k).toBeLessThan(1));
+    const centre = await centreOf(editor);
+
+    await touch(editor, [centre], [{ x: centre.x + 50, y: centre.y + 30 }]);
+    await expect.poll(async () => (await transformOf(editor)).x).toBeCloseTo(before.x + 50, 0);
+    const after = await transformOf(editor);
+    expect(after.y).toBeCloseTo(before.y + 30, 0);
+    expect(after.k).toBe(before.k);
+  });
+
+  test('zooms with a pinch', async ({ editor }) => {
+    await editor.setSource(panned(WIDE_TREE));
+    const before = await fitted(editor, (k) => expect(k).toBeLessThan(1));
+    const { x, y } = await centreOf(editor);
+
+    await touch(editor, [{ x: x - 20, y }, { x: x + 20, y }], [{ x: x - 80, y }, { x: x + 80, y }]);
+    await expect.poll(async () => (await transformOf(editor)).k).toBeGreaterThan(before.k * 2);
+  });
 });

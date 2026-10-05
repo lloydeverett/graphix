@@ -188,6 +188,18 @@ export class GxMermaid extends LitElement {
     }
   }
 
+  protected updated(changed: Map<PropertyKey, unknown>) {
+    if (!changed.has('svg')) return;
+    // Mermaid draws at 100% wide, up to the drawing's natural width; but a box
+    // that shrinks to fit its content (as a Pan View's does) gives 100% nothing
+    // to resolve against, and the drawing collapses. So draw at its natural
+    // width, capped at 100% by the style above: the same anywhere else.
+    const drawing = this.renderRoot.querySelector('.diagram svg');
+    if (!(drawing instanceof SVGSVGElement) || !drawing.style.maxWidth) return;
+    drawing.style.width = drawing.style.maxWidth;
+    drawing.style.maxWidth = '';
+  }
+
   #showDiagram(text: string, svg: string) {
     this.#lastGoodText = text;
     this.#lastGoodTheme = currentTheme();
