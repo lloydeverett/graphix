@@ -16,6 +16,7 @@ import { toolbarStyles } from './toolbar-styles.js';
 const SOURCE_STORAGE_KEY = 'graphix:source';
 const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
 const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
+const SYSTEM_FONT_STORAGE_KEY = 'graphix:system-font';
 
 /** Below this width the Source is stacked above the Preview. */
 const narrowScreen = matchMedia('(max-width: 720px)');
@@ -80,6 +81,22 @@ function saveWordWrap(wordWrap: boolean) {
   }
 }
 
+function loadSystemFont(): boolean {
+  try {
+    return localStorage.getItem(SYSTEM_FONT_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveSystemFont(systemFont: boolean) {
+  try {
+    localStorage.setItem(SYSTEM_FONT_STORAGE_KEY, String(systemFont));
+  } catch {
+    // Storage unavailable; the setting just won't persist.
+  }
+}
+
 @customElement('graphix-app')
 export class GraphixApp extends LitElement {
   static styles = [
@@ -119,6 +136,10 @@ export class GraphixApp extends LitElement {
         flex: 1;
         min-height: 0;
       }
+
+      source-editor[system-font] {
+        --editor-font-family: ui-monospace, monospace;
+      }
     `,
   ];
 
@@ -130,6 +151,9 @@ export class GraphixApp extends LitElement {
 
   /** Whether long lines in the Source wrap. */
   @state() wordWrap = loadWordWrap();
+
+  /** Whether the Source is shown in the system's monospace font, rather than Cascadia Mono. */
+  @state() systemFont = loadSystemFont();
 
   #settingsIcon = icon(Settings);
 
@@ -184,6 +208,11 @@ export class GraphixApp extends LitElement {
     saveWordWrap(this.wordWrap);
   }
 
+  #onSystemFontSelect(event: Event) {
+    this.systemFont = (event.target as MenuItem).checked;
+    saveSystemFont(this.systemFont);
+  }
+
   render() {
     return html`
       <split-pane
@@ -209,11 +238,17 @@ export class GraphixApp extends LitElement {
                 .checked=${this.wordWrap}
                 @menu-select=${this.#onWordWrapSelect}
               >Word wrap</menu-item>
+              <menu-item
+                type="checkbox"
+                .checked=${this.systemFont}
+                @menu-select=${this.#onSystemFontSelect}
+              >Use system font</menu-item>
             </context-menu>
           </header>
           <source-editor
             .value=${this.source}
             .wordWrap=${this.wordWrap}
+            .systemFont=${this.systemFont}
             @source-input=${this.#onInput}
           ></source-editor>
         </div>

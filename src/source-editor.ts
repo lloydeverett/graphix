@@ -24,7 +24,7 @@ const theme = EditorView.theme({
     fontSize: 'var(--editor-font-size)',
   },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'ui-monospace, monospace', lineHeight: '1.5' },
+  '.cm-scroller': { fontFamily: 'var(--editor-font-family)', lineHeight: '1.5' },
   '.cm-content': { padding: '16px 0', caretColor: 'var(--fg)' },
   '.cm-line': { padding: '0 16px 0 8px' },
   '.cm-cursor': { borderLeftColor: 'var(--fg)' },
@@ -61,6 +61,9 @@ export class SourceEditor extends LitElement {
 
   /** Whether long lines wrap to fit the editor, rather than scroll sideways. */
   @property({ type: Boolean }) wordWrap = true;
+
+  /** Whether to show the Source in the system's monospace font, rather than Cascadia Mono. */
+  @property({ type: Boolean, reflect: true, attribute: 'system-font' }) systemFont = false;
 
   #wordWrapCompartment = new Compartment();
 

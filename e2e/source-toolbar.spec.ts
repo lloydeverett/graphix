@@ -96,6 +96,42 @@ test('word wrap is on by default, and can be turned off and stays off', async ({
   await expect.poll(wraps).toBe(true);
 });
 
+test('the Source is in Cascadia Mono, served from this site, unless Use system font is on', async ({ editor, page }) => {
+  const fontRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.resourceType() === 'font') fontRequests.push(request.url());
+  });
+  await page.reload();
+  const content = page.locator('source-editor .cm-content');
+  const fontFamily = () => content.evaluate((element) => getComputedStyle(element).fontFamily);
+  const cascadiaLoaded = () =>
+    page.evaluate(async () => {
+      await document.fonts.ready;
+      return [...document.fonts].some((face) => face.family.includes('Cascadia Mono') && face.status === 'loaded');
+    });
+  const systemFont = page.getByRole('menuitemcheckbox', { name: 'Use system font' });
+
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
+  await expect.poll(cascadiaLoaded).toBe(true);
+  expect(fontRequests.length).toBeGreaterThan(0);
+  const origin = new URL(page.url()).origin;
+  for (const url of fontRequests) expect(new URL(url).origin).toBe(origin);
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(systemFont).not.toBeChecked();
+  await systemFont.click();
+  await expect.poll(fontFamily).toBe('ui-monospace, monospace');
+
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(fontFamily).toBe('ui-monospace, monospace');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(systemFont).toBeChecked();
+  await systemFont.click();
+  await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
+});
+
 test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await editor.setSource(LONG_LINE);
   const settings = page.getByRole('button', { name: 'Settings' });
@@ -110,6 +146,9 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await expect(settings).toBeFocused();
 
   await page.keyboard.press('Enter');
+  await expect(wordWrap).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Use system font' })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(wordWrap).toBeFocused();
   await page.keyboard.press(' ');
