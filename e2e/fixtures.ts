@@ -46,6 +46,10 @@ export class Editor {
   }
 }
 
+/** The Source of a Tree Node labelled `label`, holding `content`. */
+export const treeNodeSource = (label: string, content = '') =>
+  `<gx-tree-node label="${label}">${content}</gx-tree-node>`;
+
 export const test = base.extend<Fixtures>({
   allowedErrors: [[], { option: true }],
 

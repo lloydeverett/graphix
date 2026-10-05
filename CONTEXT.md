@@ -1,6 +1,6 @@
 # graphix
 
-A browser-only live HTML editor: you type HTML Source on one side and see its Preview on the other. A `<gx-mermaid>` element in the Source draws its contents as a Mermaid diagram, and nested `<gx-tree-node>` elements draw a Tree.
+A browser-only live HTML editor: you type HTML Source on one side and see its Preview on the other. A `<gx-mermaid>` element in the Source draws its contents as a Mermaid diagram, nested `<gx-tree-node>` elements draw a Tree, and a `<gx-pan>` element shows its contents in a Pan View.
 
 ## Language
 
@@ -31,6 +31,10 @@ _Avoid_: graph, org chart
 **Tree Node**:
 A `<gx-tree-node>`: a box showing its label and content, joined by edges to the Tree Nodes nested directly inside it.
 _Avoid_: vertex, item
+
+**Pan View**:
+A `<gx-pan>` element: a fixed-size window onto the Source inside it, which the user can pan and zoom. Its content is fitted to it until the user moves it, and keeps its pan and zoom through edits until a Refresh.
+_Avoid_: viewport, canvas, scroller
 
 **Render Error**:
 The failure shown on a Diagram whose Mermaid text can't be parsed or rendered; while it's shown, the Diagram keeps its last successful drawing.

@@ -1,13 +1,11 @@
 import { type Locator } from '@playwright/test';
-import { type Editor, expect, test } from './fixtures.js';
-
-const node = (label: string, content = '') => `<gx-tree-node label="${label}">${content}</gx-tree-node>`;
+import { type Editor, expect, test, treeNodeSource } from './fixtures.js';
 
 /** A Tree whose root, labelled Root, holds `children`. */
 const tree = (children: string[], rootAttributes = '') =>
   `<gx-tree-node label="Root"${rootAttributes}>\n${children.map((child) => `  ${child}\n`).join('')}</gx-tree-node>`;
 
-const CHILDREN = [node('Child A'), node('Child B', '<a href="#b">more</a>')];
+const CHILDREN = [treeNodeSource('Child A'), treeNodeSource('Child B', '<a href="#b">more</a>')];
 
 const treeNode = (editor: Editor, label: string) => editor.preview.locator(`gx-tree-node[label="${label}"]`);
 
@@ -52,7 +50,7 @@ test('lays out again when a Tree Node is added, keeping the others', async ({ ed
   await expect(edges(editor)).toHaveCount(2);
   await editor.mark('gx-tree-node[label="Child A"]');
 
-  await editor.setSource(tree([...CHILDREN, node('Child C')]));
+  await editor.setSource(tree([...CHILDREN, treeNodeSource('Child C')]));
   await expect(edges(editor)).toHaveCount(3);
   const c = treeNode(editor, 'Child C');
   await expect(card(c)).toBeVisible();
@@ -63,7 +61,7 @@ test('lays out again when a Tree Node is added, keeping the others', async ({ ed
 });
 
 test('lays out again when a Tree Node grows', async ({ editor }) => {
-  await editor.setSource(tree([node('Child A', 'a'), node('Child B')]));
+  await editor.setSource(tree([treeNodeSource('Child A', 'a'), treeNodeSource('Child B')]));
   const a = treeNode(editor, 'Child A');
   const b = treeNode(editor, 'Child B');
   await expect(card(b)).toBeVisible();
@@ -71,7 +69,7 @@ test('lays out again when a Tree Node grows', async ({ editor }) => {
   await editor.mark('gx-tree-node[label="Child A"]');
 
   // Edits the text in place, which only changes Child A's size.
-  await editor.setSource(tree([node('Child A', 'a much longer line of content'), node('Child B')]));
+  await editor.setSource(tree([treeNodeSource('Child A', 'a much longer line of content'), treeNodeSource('Child B')]));
   await expect(a).toContainText('a much longer line of content');
   expect(await editor.isMarked('gx-tree-node[label="Child A"]')).toBe(true);
   await expect(async () => {
