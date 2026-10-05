@@ -63,9 +63,8 @@ test('wraps text at the width of the view', async ({ editor }) => {
   expect(paragraphBox!.height).toBeGreaterThan(40);
 });
 
-test('shows a full-width table, as water.css styles it, at its natural size', async ({ editor, page }) => {
-  await page.getByRole('combobox', { name: 'Base style' }).selectOption('water.css-light');
-  await expect(editor.preview.locator(':root')).toHaveAttribute('data-base-style', 'water.css-light');
+test('shows a full-width table, as water.css styles it, at its natural size', async ({ editor }) => {
+  await editor.chooseBaseStyle('water.css-light');
   await editor.setSource(panned('<table><tr><th>Name</th><th>Role</th></tr><tr><td>Ada</td><td>Engineer</td></tr></table>'));
   const table = editor.preview.locator('gx-pan table');
   await expect(table).toHaveCSS('table-layout', 'fixed');

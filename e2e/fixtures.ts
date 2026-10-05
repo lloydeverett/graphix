@@ -29,6 +29,38 @@ export class Editor {
     await this.sourceBox.fill(source);
   }
 
+  /** The button that opens the Base Style menu, named for the one chosen. */
+  get baseStylePicker() {
+    return this.page.getByRole('button', { name: /^Base style/ });
+  }
+
+  get baseStyleMenu() {
+    return this.page.getByRole('menu', { name: 'Base style' });
+  }
+
+  /** The Base Style menu's item for `id`, whether or not the menu is open. */
+  baseStyleItem(id: string) {
+    return this.page.locator(`#base-style-menu menu-item[value="${id}"]`);
+  }
+
+  /** The Preview's root, whose `data-base-style` is the Base Style it shows. */
+  get shownBaseStyle() {
+    return this.preview.locator(':root');
+  }
+
+  /** Chooses a Base Style from its menu, and waits for the Preview to show it. */
+  async chooseBaseStyle(id: string) {
+    await this.pickBaseStyle(id);
+    await expect(this.shownBaseStyle).toHaveAttribute('data-base-style', id);
+  }
+
+  /** Chooses a Base Style from its menu, without waiting for it to load. */
+  async pickBaseStyle(id: string) {
+    await this.baseStylePicker.click();
+    await this.baseStyleItem(id).click();
+    await expect(this.baseStyleMenu).toBeHidden();
+  }
+
   /** Runs `fn` inside the current Preview iframe, retrying if a Refresh swaps it. */
   async inPreview<T>(fn: () => T | Promise<T>): Promise<T> {
     return this.preview.locator(':root').evaluate(fn);

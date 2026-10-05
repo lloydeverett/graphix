@@ -1,8 +1,10 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
-import { RefreshCw } from 'lucide';
+import { ChevronDown, RefreshCw } from 'lucide';
 import { BASE_STYLES, type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
+import './context-menu.js';
+import type { MenuItem } from './context-menu.js';
 import { icon } from './icon.js';
 import { type BaseStyleMessage, type SourceMessage, isReadyMessage } from './preview-protocol.js';
 import { toolbarStyles } from './toolbar-styles.js';
@@ -45,7 +47,10 @@ function previewUrl(nonce: string, baseStyle: BaseStyleId) {
 /**
  * Shows a Source as a Preview: the HTML rendered in a sandboxed iframe, which
  * is updated in place as the Source changes and rebuilt only on Refresh.
- * Choosing a Base Style restyles it in place too.
+ * Choosing a Base Style restyles it in place too, and while the Base Style
+ * menu is open, the Preview tries on whichever one is under the pointer or
+ * the keyboard's focus. With the pointer outside the menu, or the menu
+ * closed, it shows the one chosen.
  *
  * @fires base-style-change - when the user chooses a Base Style; `baseStyle` is the new one.
  */
@@ -60,6 +65,17 @@ export class PreviewPane extends LitElement {
         min-height: 0;
       }
 
+      .base-style {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding-right: 4px;
+      }
+
+      #base-style-menu {
+        min-width: 180px;
+      }
+
       iframe {
         flex: 1;
         width: 100%;
@@ -72,6 +88,9 @@ export class PreviewPane extends LitElement {
 
   @property() baseStyle: BaseStyleId = DEFAULT_BASE_STYLE;
 
+  /** The Base Style being tried on from the open menu, shown in place of `baseStyle` until one is chosen. */
+  @state() tryingOn?: BaseStyleId;
+
   /** Identifies the current iframe; a new one gets a new nonce. */
   @state() nonce = newNonce();
 
@@ -82,6 +101,12 @@ export class PreviewPane extends LitElement {
   #src = '';
 
   #refreshIcon = icon(RefreshCw);
+  #chevronIcon = icon(ChevronDown);
+
+  /** The Base Style on screen: the one being tried on, or else the one chosen. */
+  get #shownStyle() {
+    return this.tryingOn ?? this.baseStyle;
+  }
 
   /** Connects to the current iframe's runtime once it reports ready. */
   #port?: MessagePort;
@@ -124,15 +149,31 @@ export class PreviewPane extends LitElement {
   }
 
   #sendBaseStyle() {
-    const message: BaseStyleMessage = { type: 'graphix:base-style', baseStyle: this.baseStyle };
+    const message: BaseStyleMessage = { type: 'graphix:base-style', baseStyle: this.#shownStyle };
     this.#port?.postMessage(message);
   }
 
-  #onBaseStyleChange(event: Event) {
-    const { value } = event.target as HTMLSelectElement;
+  /** Tries on the Base Style whose item has focus, from the pointer or the arrow keys. */
+  #onBaseStyleFocus(event: FocusEvent) {
+    const { value } = event.target as MenuItem;
+    if (isBaseStyleId(value)) this.tryingOn = value;
+  }
+
+  #onBaseStyleSelect(event: Event) {
+    const { value } = event.target as MenuItem;
     if (!isBaseStyleId(value)) return;
     this.baseStyle = value;
     this.dispatchEvent(new Event('base-style-change'));
+  }
+
+  /** Leaving the menu, the pointer puts back the chosen Base Style, to compare it with the ones tried on. */
+  #onBaseStyleMenuLeave() {
+    this.tryingOn = undefined;
+  }
+
+  /** Closed without a choice, the menu puts back the Base Style that was chosen. */
+  #onBaseStyleMenuToggle(event: ToggleEvent) {
+    if (event.newState === 'closed') this.tryingOn = undefined;
   }
 
   protected willUpdate(changed: Map<PropertyKey, unknown>) {
@@ -140,27 +181,38 @@ export class PreviewPane extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('baseStyle')) {
-      // Set after the options render; on the <select> in the template, it can come before them.
-      this.renderRoot.querySelector('select')!.value = this.baseStyle;
-      this.#sendBaseStyle();
-    }
+    if (changed.has('baseStyle') || changed.has('tryingOn')) this.#sendBaseStyle();
     if (changed.has('source')) this.#sendSource();
   }
 
   render() {
+    const label = BASE_STYLES.find(({ id }) => id === this.baseStyle)?.label ?? this.baseStyle;
     return html`
       <header>
-        <select
-          aria-label="Base style"
+        <button
+          type="button"
+          class="base-style"
+          aria-label="Base style: ${label}"
           title="The stylesheet the Preview starts from"
-          @change=${this.#onBaseStyleChange}
+          aria-haspopup="menu"
+          popovertarget="base-style-menu"
+        >
+          ${label} ${this.#chevronIcon}
+        </button>
+        <context-menu
+          id="base-style-menu"
+          aria-label="Base style"
+          align="end"
+          @focusin=${this.#onBaseStyleFocus}
+          @menu-select=${this.#onBaseStyleSelect}
+          @pointerleave=${this.#onBaseStyleMenuLeave}
+          @toggle=${this.#onBaseStyleMenuToggle}
         >
           ${BASE_STYLES.map(
             ({ id, label }) =>
-              html`<option value=${id}>${label}</option>`,
+              html`<menu-item type="radio" value=${id} .checked=${id === this.baseStyle}>${label}</menu-item>`,
           )}
-        </select>
+        </context-menu>
         <button
           type="button"
           class="icon-button"

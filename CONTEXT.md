@@ -17,8 +17,8 @@ Throwing away the Preview's iframe and building it afresh from the current Sourc
 _Avoid_: reload, reset
 
 **Base Style**:
-The stylesheet the Preview starts from, before any styles in the Source: water.css (the default, dark or light to match the user's colour scheme), the browser's defaults ("HTML only"), or one of the classless stylesheets bundled from cssbed.com. Changing it restyles the Preview in place.
-_Avoid_: theme, skin
+The stylesheet the Preview starts from, before any styles in the Source: water.css (the default, dark or light to match the user's colour scheme), the browser's defaults ("HTML only"), or one of the classless stylesheets bundled from cssbed.com. Changing it restyles the Preview in place. While its menu is open, the Preview tries on the Base Style under the pointer or the keyboard's focus, without changing the one chosen.
+_Avoid_: theme, skin; "previewing" a Base Style (say "trying it on")
 
 **Diagram**:
 A `<gx-mermaid>` element in the Source, drawn from the Mermaid text inside it.

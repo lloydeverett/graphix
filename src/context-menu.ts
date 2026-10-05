@@ -122,7 +122,8 @@ export class ContextMenu extends LitElement {
 
   #onToggle = (event: Event) => {
     const open = (event as ToggleEvent).newState === 'open';
-    if (open) this.#items[0]?.focus();
+    // A choice of one starts on the one chosen.
+    if (open) (this.#items.find((item) => item.type === 'radio' && item.checked) ?? this.#items[0])?.focus();
     const listen = open ? 'addEventListener' : 'removeEventListener';
     window[listen]('blur', this.#onWindowBlur);
     window[listen]('resize', this.#place);
@@ -163,8 +164,10 @@ export class ContextMenu extends LitElement {
 
 /**
  * An item in a `<context-menu>`. Give it `type="checkbox"` to make it a
- * setting that's on or off: choosing it flips `checked`. A `disabled` item
- * can still be focused, but choosing it does nothing.
+ * setting that's on or off: choosing it flips `checked`. Give it
+ * `type="radio"` to make it one of a choice of one, marked as chosen by
+ * `checked`; choosing it leaves `checked` to whoever keeps the choice. A
+ * `disabled` item can still be focused, but choosing it does nothing.
  *
  * @fires menu-select - when the user chooses the item, after any change to `checked`. Bubbles.
  */
@@ -207,14 +210,17 @@ export class MenuItem extends LitElement {
     }
   `;
 
-  /** A plain item does something; a checkbox item turns a setting on or off. */
-  @property({ reflect: true }) type: 'normal' | 'checkbox' = 'normal';
+  /** A plain item does something; a checkbox item turns a setting on or off; a radio item is one of a choice. */
+  @property({ reflect: true }) type: 'normal' | 'checkbox' | 'radio' = 'normal';
 
-  /** Whether a checkbox item's setting is on. */
+  /** Whether a checkbox item's setting is on, or a radio item is the one chosen. */
   @property({ type: Boolean, reflect: true }) checked = false;
 
   /** Whether choosing the item leaves its menu open, for a setting that's often changed a few times in a row. */
   @property({ type: Boolean, attribute: 'keep-open' }) keepOpen = false;
+
+  /** What a radio item stands for, to tell which was chosen. */
+  @property() value = '';
 
   /** Whether the item can't be chosen just now. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -224,8 +230,11 @@ export class MenuItem extends LitElement {
   constructor() {
     super();
     this.addEventListener('click', this.#choose);
-    // So the arrow keys carry on from the item under the pointer.
-    this.addEventListener('pointermove', () => this.focus());
+    // So the arrow keys carry on from the item under the pointer. Not a
+    // finger's: it has no hover, and one scrolling the menu passes over items.
+    this.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'touch') this.focus();
+    });
     this.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
@@ -239,6 +248,11 @@ export class MenuItem extends LitElement {
     this.tabIndex = -1;
   }
 
+  /** Whether the item shows a check: a checkbox's or a radio's. */
+  get #checkable() {
+    return this.type !== 'normal';
+  }
+
   #choose = () => {
     if (this.disabled) return;
     if (this.type === 'checkbox') this.checked = !this.checked;
@@ -246,9 +260,8 @@ export class MenuItem extends LitElement {
   };
 
   protected willUpdate() {
-    const checkbox = this.type === 'checkbox';
-    this.setAttribute('role', checkbox ? 'menuitemcheckbox' : 'menuitem');
-    if (checkbox) this.setAttribute('aria-checked', String(this.checked));
+    this.setAttribute('role', { normal: 'menuitem', checkbox: 'menuitemcheckbox', radio: 'menuitemradio' }[this.type]);
+    if (this.#checkable) this.setAttribute('aria-checked', String(this.checked));
     else this.removeAttribute('aria-checked');
     if (this.disabled) this.setAttribute('aria-disabled', 'true');
     else this.removeAttribute('aria-disabled');
@@ -256,7 +269,7 @@ export class MenuItem extends LitElement {
 
   render() {
     return html`
-      ${this.type === 'checkbox'
+      ${this.#checkable
         ? html`<span class="check">${this.checked ? this.#checkIcon : nothing}</span>`
         : nothing}
       <slot></slot>

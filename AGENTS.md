@@ -4,6 +4,12 @@ graphix is a live HTML editor. `README.md` covers what it does and how to run it
 `CONTEXT.md` is the glossary. Use its terms (Source, Preview, Refresh, Diagram,
 Render Error) in code, comments and commits.
 
+## Tools
+
+Node and pnpm are pinned in `mise.toml`, and aren't on the PATH otherwise. Every
+`pnpm` command in these notes means running it through mise, as
+`mise exec -- pnpm <script>`.
+
 ## Before calling a change done
 
 Run both, and make sure they pass:
