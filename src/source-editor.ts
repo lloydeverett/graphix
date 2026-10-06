@@ -6,6 +6,7 @@ import { getCM, vim } from '@replit/codemirror-vim';
 import { EditorView, basicSetup } from 'codemirror';
 import { LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { DEFAULT_EDITOR_FONT, type EditorFontId, editorFontFamily } from './editor-font.js';
 
 /** Colours come from theme.css, so they follow the light and dark themes. */
 const highlightStyle = HighlightStyle.define([
@@ -137,8 +138,8 @@ export class SourceEditor extends LitElement {
   /** Whether long lines wrap to fit the editor, rather than scroll sideways. */
   @property({ type: Boolean }) wordWrap = true;
 
-  /** Whether to show the Source in the system's monospace font, rather than Cascadia Mono. */
-  @property({ type: Boolean }) systemFont = false;
+  /** The font to show the Source in. */
+  @property() font: EditorFontId = DEFAULT_EDITOR_FONT;
 
   /** The text size, in px. */
   @property({ type: Number }) textSize = 14;
@@ -243,14 +244,12 @@ export class SourceEditor extends LitElement {
     return EditorView.theme({
       '.cm-scroller, .cm-tooltip-autocomplete': { fontSize: `${this.textSize}px` },
       // And Vim's panel, where `:` and `/` commands are typed, as Vim gives it a monospace font.
-      '.cm-scroller, .cm-vim-panel': {
-        fontFamily: this.systemFont ? 'var(--editor-system-font-family)' : 'var(--editor-font-family)',
-      },
+      '.cm-scroller, .cm-vim-panel': { fontFamily: editorFontFamily(this.font) },
     });
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('textSize') || changed.has('systemFont')) {
+    if (changed.has('textSize') || changed.has('font')) {
       this.#view?.dispatch({ effects: this.#fontCompartment.reconfigure(this.#fontTheme()) });
     }
     if (changed.has('vimMode')) {

@@ -96,40 +96,131 @@ test('word wrap is on by default, and can be turned off and stays off', async ({
   await expect.poll(wraps).toBe(true);
 });
 
-test('the Source is in Cascadia Mono, served from this site, unless Use system font is on', async ({ editor, page }) => {
+const sourceFontFamily = (page: Page) => () =>
+  page.locator('source-editor .cm-content').evaluate((element) => getComputedStyle(element).fontFamily);
+
+/** Whether the editor has loaded a face of `family`. */
+const editorFontLoaded = (page: Page, family: string) => () =>
+  page.evaluate(async (family) => {
+    await document.fonts.ready;
+    return [...document.fonts].some((face) => face.family.includes(family) && face.status === 'loaded');
+  }, family);
+
+test('the Source is in Cascadia Code, served from this site, and the Font section picks another', async ({
+  editor,
+  page,
+}) => {
   const fontRequests: string[] = [];
   page.on('request', (request) => {
     if (request.resourceType() === 'font') fontRequests.push(request.url());
   });
   await page.reload();
-  const content = page.locator('source-editor .cm-content');
-  const fontFamily = () => content.evaluate((element) => getComputedStyle(element).fontFamily);
-  const cascadiaLoaded = () =>
-    page.evaluate(async () => {
-      await document.fonts.ready;
-      return [...document.fonts].some((face) => face.family.includes('Cascadia Mono') && face.status === 'loaded');
-    });
-  const systemFont = page.getByRole('menuitemcheckbox', { name: 'Use system font' });
+  const fontFamily = sourceFontFamily(page);
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
+  const font = menu.getByRole('group', { name: 'Font' });
 
   await expect(editor.sourceBox).toBeVisible();
-  await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
-  await expect.poll(cascadiaLoaded).toBe(true);
-  expect(fontRequests.length).toBeGreaterThan(0);
+  await expect.poll(fontFamily).toBe('"Cascadia Code", ui-monospace, monospace');
+  await expect.poll(editorFontLoaded(page, 'Cascadia Code')).toBe(true);
   const origin = new URL(page.url()).origin;
   for (const url of fontRequests) expect(new URL(url).origin).toBe(origin);
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await expect(systemFont).not.toBeChecked();
-  await systemFont.click();
+  await expect(font.getByText('Font', { exact: true })).toBeVisible();
+  await expect(font.getByRole('menuitemradio')).toHaveText(['Cascadia Code', 'Cascadia Mono', 'Fira Code', 'JetBrains Mono', 'System Mono']);
+  await expect(font.getByRole('menuitemradio', { name: 'Cascadia Code' })).toBeChecked();
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Use system font' })).toHaveCount(0);
+  await font.getByRole('menuitemradio', { name: 'Fira Code' }).click();
+  await expect(menu).toBeHidden();
+  await expect.poll(fontFamily).toBe('"Fira Code", ui-monospace, monospace');
+  await expect.poll(editorFontLoaded(page, 'Fira Code')).toBe(true);
+  expect(fontRequests.some((url) => /fira-code/.test(url))).toBe(true);
+  for (const url of fontRequests) expect(new URL(url).origin).toBe(origin);
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await font.getByRole('menuitemradio', { name: 'Cascadia Mono' }).click();
+  await expect.poll(fontFamily).toBe('"Cascadia Mono", ui-monospace, monospace');
+  await expect.poll(editorFontLoaded(page, 'Cascadia Mono')).toBe(true);
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await font.getByRole('menuitemradio', { name: 'JetBrains Mono' }).click();
+  await expect.poll(fontFamily).toBe('"JetBrains Mono", ui-monospace, monospace');
+  await expect.poll(editorFontLoaded(page, 'JetBrains Mono')).toBe(true);
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await font.getByRole('menuitemradio', { name: 'System Mono' }).click();
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
 
   await page.reload();
   await expect(editor.sourceBox).toBeVisible();
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await expect(systemFont).toBeChecked();
-  await systemFont.click();
-  await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
+  await expect(font.getByRole('menuitemradio', { name: 'System Mono' })).toBeChecked();
+  await expect(font.getByRole('menuitemradio', { name: 'Cascadia Code' })).not.toBeChecked();
+});
+
+test('Use system font, if it was on, carries over as System Mono', async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:system-font', 'true'));
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(sourceFontFamily(page)).toBe('ui-monospace, monospace');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('menuitemradio', { name: 'System Mono' })).toBeChecked();
+});
+
+test('starts on Cascadia Code when the saved Editor Font is gone', async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:editor-font', 'comic-mono'));
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(sourceFontFamily(page)).toMatch(/^"Cascadia Code",/);
+});
+
+test('tries on each Editor Font under the pointer or the keyboard, and puts back the chosen one', async ({
+  editor,
+  page,
+}) => {
+  await expect(editor.sourceBox).toBeVisible();
+  const fontFamily = sourceFontFamily(page);
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
+  const item = (name: string) => menu.getByRole('menuitemradio', { name });
+
+  await settings.click();
+  await item('Fira Code').hover();
+  await expect.poll(fontFamily).toMatch(/^"Fira Code",/);
+  await item('System Mono').hover();
+  await expect.poll(fontFamily).toBe('ui-monospace, monospace');
+  // Leaving the fonts puts back the chosen one, to compare.
+  await menu.getByRole('menuitemcheckbox', { name: 'Word wrap' }).hover();
+  await expect(menu).toBeVisible();
+  await expect.poll(fontFamily).toMatch(/^"Cascadia Code",/);
+
+  // As do Escape and clicking away.
+  await item('JetBrains Mono').hover();
+  await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect.poll(fontFamily).toMatch(/^"Cascadia Code",/);
+  await settings.click();
+  await item('Fira Code').hover();
+  await expect.poll(fontFamily).toMatch(/^"Fira Code",/);
+  await editor.preview.locator('h1').click();
+  await expect(menu).toBeHidden();
+  await expect.poll(fontFamily).toMatch(/^"Cascadia Code",/);
+
+  // From the keyboard, Enter chooses.
+  await settings.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await expect(item('System Mono')).toBeFocused();
+  await expect.poll(fontFamily).toBe('ui-monospace, monospace');
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeHidden();
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
 });
 
 /** Reopens the editor with Vim mode on, and the Source set to `source` if given, focused in Normal mode. */
@@ -313,7 +404,7 @@ test('the line numbers follow the text as its size and font change', async ({ ed
   await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
   for (let step = 0; step < 8; step++) await page.getByRole('menuitem', { name: 'Smaller text' }).click();
   await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
-  await page.getByRole('menuitemcheckbox', { name: 'Use system font' }).click();
+  await page.getByRole('menuitemradio', { name: 'JetBrains Mono' }).click();
   await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
 });
 
@@ -347,16 +438,18 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await page.keyboard.press('Enter');
   await expect(wordWrap).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('menuitemcheckbox', { name: 'Use system font' })).toBeFocused();
-  await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitemcheckbox', { name: 'Vim mode' })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: 'Smaller text' })).toBeFocused();
-  await page.keyboard.press('End');
+  await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: 'Larger text' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(menu).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Larger text' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemradio', { name: 'Cascadia Code' })).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('menuitemradio', { name: 'System Mono' })).toBeFocused();
   await page.keyboard.press('Home');
   await expect(wordWrap).toBeFocused();
   await page.keyboard.press(' ');
@@ -366,7 +459,7 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await expect(wordWrap).not.toBeChecked();
 });
 
-test("Vim mode's prompts are in the Source's font, typed just after the prompt, and follow Use system font", async ({
+test("Vim mode's prompts are in the Source's font, typed just after the prompt, and follow the Editor Font", async ({
   editor,
   page,
 }) => {
@@ -392,7 +485,7 @@ test("Vim mode's prompts are in the Source's font, typed just after the prompt, 
     await page.keyboard.type(prompt);
     await expect(input).toBeFocused();
     const { source, ...rest } = await fonts();
-    expect(source).toMatch(/^"?Cascadia Mono"?,/);
+    expect(source).toMatch(/^"?Cascadia Code"?,/);
     expect(rest).toEqual({ prompt: source, input: source });
     const { gap, top, height } = await layout();
     expect(Math.abs(gap), 'gap after the prompt').toBeLessThan(0.5);
@@ -402,7 +495,7 @@ test("Vim mode's prompts are in the Source's font, typed just after the prompt, 
   }
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Use system font' }).click();
+  await page.getByRole('menuitemradio', { name: 'System Mono' }).click();
   await editor.sourceBox.click();
   await page.keyboard.press('Escape');
   await page.keyboard.type(':');
@@ -435,7 +528,7 @@ test("the editor's controls are in Inter, served from this site, whatever the So
     )
     .toBe(true);
 
-  // A search's fields and buttons too, though the Source stays in Cascadia Mono.
+  // A search's fields and buttons too, though the Source stays in Cascadia Code.
   await page.keyboard.press('Escape');
   await editor.sourceBox.click();
   await page.keyboard.press('ControlOrMeta+f');
@@ -444,5 +537,5 @@ test("the editor's controls are in Inter, served from this site, whatever the So
   await expect.poll(() => searchField.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(interFamily);
   await expect
     .poll(() => page.locator('source-editor .cm-content').evaluate((element) => getComputedStyle(element).fontFamily))
-    .toMatch(/^"?Cascadia Mono"?,/);
+    .toMatch(/^"?Cascadia Code"?,/);
 });

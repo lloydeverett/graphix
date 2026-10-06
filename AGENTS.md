@@ -52,9 +52,10 @@ editor or the Preview; tests that expect some declare them with
   `import './m.js'`, or the element silently never upgrades.
 - `src/source-editor.ts` wraps CodeMirror without a shadow root, and themes it
   through `EditorView.theme` and tokens in `theme.css` (`--syntax-*`,
-  `--editor-font-family`). Put media queries in `theme.css`: a rule nested in
-  `@media` inside `EditorView.theme` didn't take effect. On touch screens the
-  editor's text starts at 16px, or mobile browsers zoom in when it's focused.
+  `--editor-system-font-family`). Put media queries in `theme.css`: a rule
+  nested in `@media` inside `EditorView.theme` didn't take effect. On touch
+  screens the editor's text starts at 16px, or mobile browsers zoom in when
+  it's focused.
 - `src/split-pane.ts` (`<split-pane>`, `<split-divider>`) has no shadow root
   either; it adds its styles to the root it's placed in. The consumer lays out
   the children and puts a `<split-divider>` between two of them. While

@@ -62,7 +62,9 @@ The gear beside Refresh picks the preview's font, over the base stylesheet's:
 **Lato** (the default) or **Inter**, bundled with graphix, or **System** to keep
 the stylesheet's own. Code stays monospace, and your own CSS still wins.
 The gear above the editor opens its settings: turn **Word wrap** off to scroll
-long lines sideways instead, or **Vim mode** on to edit with Vim's keys.
+long lines sideways instead, or **Vim mode** on to edit with Vim's keys, and
+pick the editor's font: **Cascadia Code** (the default), **Cascadia Mono**,
+**Fira Code** or **JetBrains Mono**, bundled with graphix, or **System Mono**.
 Settings are kept in the browser, like your HTML.
 
 When hosting the built site, serve the preview's scripts with

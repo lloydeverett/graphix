@@ -8,6 +8,7 @@ import './source-editor.js';
 import './split-pane.js';
 import { DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import type { MenuItem } from './context-menu.js';
+import { DEFAULT_EDITOR_FONT, EDITOR_FONTS, type EditorFontId, isEditorFontId } from './editor-font.js';
 import { icon } from './icon.js';
 import { DEFAULT_PREVIEW_FONT, isPreviewFontId } from './preview-font.js';
 import type { PreviewPane } from './preview-pane.js';
@@ -18,6 +19,8 @@ const SOURCE_STORAGE_KEY = 'graphix:source';
 const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
 const PREVIEW_FONT_STORAGE_KEY = 'graphix:preview-font';
 const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
+const EDITOR_FONT_STORAGE_KEY = 'graphix:editor-font';
+/** Where the Use system font setting, which Editor Font replaced, was kept. */
 const SYSTEM_FONT_STORAGE_KEY = 'graphix:system-font';
 const TEXT_SIZE_STORAGE_KEY = 'graphix:text-size';
 const VIM_MODE_STORAGE_KEY = 'graphix:vim-mode';
@@ -165,8 +168,15 @@ export class GraphixApp extends LitElement {
   /** Whether long lines in the Source wrap. */
   @state() wordWrap = loadFlag(WORD_WRAP_STORAGE_KEY, true);
 
-  /** Whether the Source is shown in the system's monospace font, rather than Cascadia Mono. */
-  @state() systemFont = loadFlag(SYSTEM_FONT_STORAGE_KEY, false);
+  /** The font the Source is shown in; Use system font, if it was on, carries over as System Mono. */
+  @state() editorFont = load(
+    EDITOR_FONT_STORAGE_KEY,
+    (saved) => (isEditorFontId(saved) ? saved : undefined),
+    loadFlag(SYSTEM_FONT_STORAGE_KEY, false) ? 'system-mono' : DEFAULT_EDITOR_FONT,
+  );
+
+  /** The Editor Font being tried on from the open menu, shown in place of `editorFont` until one is chosen. */
+  @state() tryingOnEditorFont?: EditorFontId;
 
   /** The Source's text size, in px. */
   @state() textSize = load(TEXT_SIZE_STORAGE_KEY, parseTextSize, defaultTextSize());
@@ -234,9 +244,27 @@ export class GraphixApp extends LitElement {
     save(WORD_WRAP_STORAGE_KEY, this.wordWrap);
   }
 
-  #onSystemFontSelect(event: Event) {
-    this.systemFont = (event.target as MenuItem).checked;
-    save(SYSTEM_FONT_STORAGE_KEY, this.systemFont);
+  /** Tries on the Editor Font whose item has focus, from the pointer or the arrow keys. */
+  #onEditorFontFocus(event: FocusEvent) {
+    const { value } = event.target as MenuItem;
+    if (isEditorFontId(value)) this.tryingOnEditorFont = value;
+  }
+
+  /** Leaving the fonts, the pointer puts back the chosen Editor Font, to compare it with the ones tried on. */
+  #onEditorFontsLeave() {
+    this.tryingOnEditorFont = undefined;
+  }
+
+  /** Closed without a choice, the menu puts back the Editor Font that was chosen. */
+  #onSettingsMenuToggle(event: ToggleEvent) {
+    if (event.newState === 'closed') this.tryingOnEditorFont = undefined;
+  }
+
+  #onEditorFontSelect(event: Event) {
+    const { value } = event.target as MenuItem;
+    if (!isEditorFontId(value)) return;
+    this.editorFont = value;
+    save(EDITOR_FONT_STORAGE_KEY, this.editorFont);
   }
 
   #onVimModeSelect(event: Event) {
@@ -268,17 +296,17 @@ export class GraphixApp extends LitElement {
               ${this.#settingsIcon}
             </button>
             <!-- Lined up with the gear's right edge, so it opens over the Source, not the Preview. -->
-            <context-menu id="settings-menu" aria-label="Settings" align="end">
+            <context-menu
+              id="settings-menu"
+              aria-label="Settings"
+              align="end"
+              @toggle=${this.#onSettingsMenuToggle}
+            >
               <menu-item
                 type="checkbox"
                 .checked=${this.wordWrap}
                 @menu-select=${this.#onWordWrapSelect}
               >Word wrap</menu-item>
-              <menu-item
-                type="checkbox"
-                .checked=${this.systemFont}
-                @menu-select=${this.#onSystemFontSelect}
-              >Use system font</menu-item>
               <menu-item
                 type="checkbox"
                 .checked=${this.vimMode}
@@ -300,12 +328,23 @@ export class GraphixApp extends LitElement {
                   @menu-select=${() => this.#stepTextSize(1)}
                 >${this.#largerIcon}</menu-item>
               </div>
+              <menu-group
+                label="Font"
+                @focusin=${this.#onEditorFontFocus}
+                @menu-select=${this.#onEditorFontSelect}
+                @pointerleave=${this.#onEditorFontsLeave}
+              >
+                ${EDITOR_FONTS.map(
+                  ({ id, label }) =>
+                    html`<menu-item type="radio" value=${id} .checked=${id === this.editorFont}>${label}</menu-item>`,
+                )}
+              </menu-group>
             </context-menu>
           </header>
           <source-editor
             .value=${this.source}
             .wordWrap=${this.wordWrap}
-            .systemFont=${this.systemFont}
+            .font=${this.tryingOnEditorFont ?? this.editorFont}
             .textSize=${this.textSize}
             .vimMode=${this.vimMode}
             @source-input=${this.#onInput}

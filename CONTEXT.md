@@ -24,6 +24,10 @@ _Avoid_: theme, skin; "previewing" a Base Style (say "trying it on")
 The font the Preview's text is shown in, over the Base Style's: Lato (the default) or Inter, bundled with graphix, or System, which leaves the Base Style's own. Code keeps the Base Style's monospace font, Diagrams keep Mermaid's, and the Source's own styles win over it. Changing it restyles the Preview in place, and while its menu is open, the Preview tries on the font under the pointer or the keyboard's focus, as it does a Base Style.
 _Avoid_: typeface, preview theme
 
+**Editor Font**:
+The monospace font the Source is shown in: Cascadia Code (the default), Cascadia Mono, Fira Code or JetBrains Mono, bundled with graphix, or System Mono, the system's own. While the editor's settings menu is open, the Source tries on the font under the pointer or the keyboard's focus.
+_Avoid_: code font, system font
+
 **Diagram**:
 A `<gx-mermaid>` element in the Source, drawn from the Mermaid text inside it.
 _Avoid_: chart, graph

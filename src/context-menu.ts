@@ -92,6 +92,17 @@ export class ContextMenu extends LitElement {
     return [...this.querySelectorAll('menu-item')];
   }
 
+  /**
+   * The item the menu opens on: the first, unless it's a choice of one, which
+   * starts on the one chosen. A choice further down waits to be reached.
+   */
+  get #firstFocus() {
+    const [first] = this.#items;
+    if (first?.type !== 'radio') return first;
+    const choices = this.#items.filter((item) => item.type === 'radio' && item.parentElement === first.parentElement);
+    return choices.find((item) => item.checked) ?? first;
+  }
+
   #onBeforeToggle = (event: Event) => {
     if ((event as ToggleEvent).newState === 'open') {
       this.#returnFocusTo = deepActiveElement();
@@ -125,8 +136,7 @@ export class ContextMenu extends LitElement {
 
   #onToggle = (event: Event) => {
     const open = (event as ToggleEvent).newState === 'open';
-    // A choice of one starts on the one chosen.
-    if (open) (this.#items.find((item) => item.type === 'radio' && item.checked) ?? this.#items[0])?.focus();
+    if (open) this.#firstFocus?.focus();
     const listen = open ? 'addEventListener' : 'removeEventListener';
     window[listen]('blur', this.#onWindowBlur);
     window[listen]('resize', this.#place);
