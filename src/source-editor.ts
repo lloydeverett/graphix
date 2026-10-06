@@ -139,7 +139,7 @@ export class SourceEditor extends LitElement {
   @property({ type: Boolean }) wordWrap = true;
 
   /** The font to show the Source in. */
-  @property() font: EditorFontId = DEFAULT_EDITOR_FONT;
+  @property() editorFont: EditorFontId = DEFAULT_EDITOR_FONT;
 
   /** The text size, in px. */
   @property({ type: Number }) textSize = 14;
@@ -244,12 +244,12 @@ export class SourceEditor extends LitElement {
     return EditorView.theme({
       '.cm-scroller, .cm-tooltip-autocomplete': { fontSize: `${this.textSize}px` },
       // And Vim's panel, where `:` and `/` commands are typed, as Vim gives it a monospace font.
-      '.cm-scroller, .cm-vim-panel': { fontFamily: editorFontFamily(this.font) },
+      '.cm-scroller, .cm-vim-panel': { fontFamily: editorFontFamily(this.editorFont) },
     });
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('textSize') || changed.has('font')) {
+    if (changed.has('textSize') || changed.has('editorFont')) {
       this.#view?.dispatch({ effects: this.#fontCompartment.reconfigure(this.#fontTheme()) });
     }
     if (changed.has('vimMode')) {

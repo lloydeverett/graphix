@@ -344,7 +344,7 @@ export class GraphixApp extends LitElement {
           <source-editor
             .value=${this.source}
             .wordWrap=${this.wordWrap}
-            .font=${this.tryingOnEditorFont ?? this.editorFont}
+            .editorFont=${this.tryingOnEditorFont ?? this.editorFont}
             .textSize=${this.textSize}
             .vimMode=${this.vimMode}
             @source-input=${this.#onInput}

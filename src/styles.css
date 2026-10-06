@@ -1,5 +1,4 @@
 @import './theme.css';
-/* Only the fonts in use are downloaded: a browser fetches a face when text is shown in it. */
 @import './fonts/cascadia-code/cascadia-code.css';
 @import './fonts/cascadia-mono/cascadia-mono.css';
 @import './fonts/fira-code/fira-code.css';
