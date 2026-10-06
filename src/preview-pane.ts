@@ -1,12 +1,13 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { ChevronDown, RefreshCw } from 'lucide';
 import { BASE_STYLES, type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import './context-menu.js';
 import type { MenuItem } from './context-menu.js';
 import { icon } from './icon.js';
-import { type BaseStyleMessage, type SourceMessage, isReadyMessage } from './preview-protocol.js';
+import { type BaseStyleMessage, type SourceMessage, isPageColorsMessage, isReadyMessage } from './preview-protocol.js';
 import { toolbarStyles } from './toolbar-styles.js';
 
 /**
@@ -50,7 +51,8 @@ function previewUrl(nonce: string, baseStyle: BaseStyleId) {
  * Choosing a Base Style restyles it in place too, and while the Base Style
  * menu is open, the Preview tries on whichever one is under the pointer or
  * the keyboard's focus. With the pointer outside the menu, or the menu
- * closed, it shows the one chosen.
+ * closed, it shows the one chosen. The toolbar takes the colours of the
+ * page in the Preview, so it sits on the Base Style it shows.
  *
  * @fires base-style-change - when the user chooses a Base Style; `baseStyle` is the new one.
  */
@@ -63,6 +65,19 @@ export class PreviewPane extends LitElement {
         display: flex;
         flex-direction: column;
         min-height: 0;
+      }
+
+      /* In the page's colours, with controls drawn from its text, so they suit any Base Style. */
+      header {
+        background: var(--page-background, var(--surface));
+        color: var(--page-text, var(--fg));
+        border-bottom-color: color-mix(in srgb, currentColor 20%, transparent);
+      }
+
+      header button {
+        border-color: color-mix(in srgb, currentColor 30%, transparent);
+        background: color-mix(in srgb, currentColor 6%, transparent);
+        color: inherit;
       }
 
       .base-style {
@@ -93,6 +108,9 @@ export class PreviewPane extends LitElement {
 
   /** Identifies the current iframe; a new one gets a new nonce. */
   @state() nonce = newNonce();
+
+  /** The colours of the page in the Preview, as it last reported them. */
+  @state() pageColors?: { background: string; text: string };
 
   /**
    * The current iframe's URL. Fixed when the iframe is made, so choosing a
@@ -139,6 +157,9 @@ export class PreviewPane extends LitElement {
     // If the iframe loads our page again, it sends a new port; the old one is dead.
     this.#port?.close();
     this.#port = port;
+    port.onmessage = ({ data }) => {
+      if (isPageColorsMessage(data)) this.pageColors = { background: data.background, text: data.text };
+    };
     this.#sendBaseStyle();
     this.#sendSource();
   };
@@ -188,7 +209,9 @@ export class PreviewPane extends LitElement {
   render() {
     const label = BASE_STYLES.find(({ id }) => id === this.baseStyle)?.label ?? this.baseStyle;
     return html`
-      <header>
+      <header
+        style=${styleMap({ '--page-background': this.pageColors?.background, '--page-text': this.pageColors?.text })}
+      >
         <button
           type="button"
           class="base-style"

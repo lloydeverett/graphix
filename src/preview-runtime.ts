@@ -5,12 +5,53 @@ import './gx-mermaid.js';
 import './gx-pan.js';
 import './gx-tree-node.js';
 import { morphChildren } from './morph.js';
-import { type ReadyMessage, isBaseStyleMessage, isSourceMessage } from './preview-protocol.js';
+import {
+  type PageColorsMessage,
+  type ReadyMessage,
+  isBaseStyleMessage,
+  isSourceMessage,
+} from './preview-protocol.js';
 
 function showSource(source: string) {
   const template = document.createElement('template');
   template.innerHTML = source;
   morphChildren(document.body, template.content);
+  reportPageColors();
+}
+
+/** Whether a colour, as getComputedStyle reports it, is fully see-through. */
+const isTransparent = (color: string) => color === 'transparent' || /^rgba\(.*,\s*0\)$/.test(color);
+
+/**
+ * The colour the page is painted on. As CSS does, it takes the root's
+ * background, or else the body's, or else the browser's default background,
+ * which follows the page's colour scheme.
+ */
+function pageBackground() {
+  for (const element of [document.documentElement, document.body]) {
+    const color = getComputedStyle(element).backgroundColor;
+    if (!isTransparent(color)) return color;
+  }
+  const probe = document.createElement('meta');
+  probe.style.backgroundColor = 'Canvas';
+  document.head.append(probe);
+  const color = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return color;
+}
+
+let reported: PageColorsMessage | undefined;
+
+/** Tells the editor the page's colours when they change, from the Base Style, the Source or the colour scheme. */
+function reportPageColors() {
+  const message: PageColorsMessage = {
+    type: 'graphix:page-colors',
+    background: pageBackground(),
+    text: getComputedStyle(document.body).color,
+  };
+  if (message.background === reported?.background && message.text === reported.text) return;
+  reported = message;
+  channel.port1.postMessage(message);
 }
 
 /** The links to the shown Base Style's stylesheets; preview.html starts with none. */
@@ -29,6 +70,7 @@ function settle(id: BaseStyleId, links: HTMLLinkElement[]) {
   baseStyleLinks = links;
   shownStyle = id;
   document.documentElement.dataset.baseStyle = id;
+  reportPageColors();
 }
 
 function loaded(link: HTMLLinkElement) {
@@ -77,6 +119,9 @@ channel.port1.onmessage = (event) => {
   if (isSourceMessage(event.data)) showSource(event.data.source);
   if (isBaseStyleMessage(event.data)) showBaseStyle(event.data.baseStyle);
 };
+
+// water.css, for one, follows the colour scheme.
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reportPageColors);
 
 const nonce = params.get('nonce') ?? '';
 const ready: ReadyMessage = { type: 'graphix:ready', nonce };

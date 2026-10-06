@@ -62,6 +62,49 @@ test('water.css is the default, dark or light to match the colour scheme', async
   await expect.poll(() => bodyBackground(editor)).toBe('rgb(255, 255, 255)');
 });
 
+test("the Preview's toolbar takes the colour of its page", async ({ editor, page }) => {
+  const toolbar = page.locator('preview-pane header');
+  // water.css-light's background is #fff.
+  await expect(toolbar).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+
+  // Following the colour scheme, as water.css does; water.css-dark's is #202b38.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(toolbar).toHaveCSS('background-color', 'rgb(32, 43, 56)');
+
+  // Or the Base Style tried on.
+  await editor.baseStylePicker.click();
+  await editor.baseStyleItem('sakura-vader').hover();
+  await expect(editor.shownBaseStyle).toHaveAttribute('data-base-style', 'sakura-vader');
+  await expect(toolbar).toHaveCSS('background-color', await bodyBackground(editor));
+  await page.keyboard.press('Escape');
+  await expect(toolbar).toHaveCSS('background-color', 'rgb(32, 43, 56)');
+
+  // Or the Source.
+  await editor.setSource('<style>html { background: rgb(1, 2, 3) }</style>');
+  await expect(toolbar).toHaveCSS('background-color', 'rgb(1, 2, 3)');
+
+  // With no background of its own, the page shows the canvas: white, as it declares no colour scheme.
+  await editor.setSource('<p>plain</p>');
+  await editor.chooseBaseStyle('none');
+  await expect(toolbar).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+});
+
+test("the Preview's toolbar controls take the colour of its page's text", async ({ editor, page }) => {
+  const refresh = page.getByRole('button', { name: 'Refresh' });
+  // A dark Base Style under the light editor; water.css-dark's text is #dbdbdb.
+  await editor.chooseBaseStyle('water.css-dark');
+  await expect(refresh).toHaveCSS('color', 'rgb(219, 219, 219)');
+  await expect(editor.baseStylePicker).toHaveCSS('color', 'rgb(219, 219, 219)');
+
+  // The menu keeps the editor's colours.
+  await editor.baseStylePicker.click();
+  await expect(editor.baseStyleMenu).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await page.keyboard.press('Escape');
+
+  await editor.chooseBaseStyle('water.css-light');
+  await expect(refresh).toHaveCSS('color', await editor.inPreview(() => getComputedStyle(document.body).color));
+});
+
 test('starts on water.css when the saved Base Style is gone', async ({ editor, page }) => {
   await page.evaluate(() => localStorage.setItem('graphix:base-style', 'graphix'));
   await page.reload();
