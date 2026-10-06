@@ -77,19 +77,6 @@ export class PreviewPane extends LitElement {
         min-height: 0;
       }
 
-      /* In the page's colours, with controls drawn from its text, so they suit any Base Style. */
-      header {
-        background: var(--page-background, var(--surface));
-        color: var(--page-text, var(--fg));
-        border-bottom-color: color-mix(in srgb, currentColor 20%, transparent);
-      }
-
-      header button {
-        border-color: color-mix(in srgb, currentColor 30%, transparent);
-        background: color-mix(in srgb, currentColor 6%, transparent);
-        color: inherit;
-      }
-
       .base-style {
         display: inline-flex;
         align-items: center;
@@ -259,7 +246,10 @@ export class PreviewPane extends LitElement {
     const label = BASE_STYLES.find(({ id }) => id === this.baseStyle)?.label ?? this.baseStyle;
     return html`
       <header
-        style=${styleMap({ '--page-background': this.pageColors?.background, '--page-text': this.pageColors?.text })}
+        style=${styleMap({
+          '--toolbar-background': this.pageColors?.background,
+          '--toolbar-text': this.pageColors?.text,
+        })}
       >
         <button
           type="button"

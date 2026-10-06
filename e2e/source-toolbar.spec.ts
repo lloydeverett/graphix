@@ -211,8 +211,11 @@ test('tries on each Editor Font under the pointer or the keyboard, and puts back
   // From the keyboard, Enter chooses.
   await settings.focus();
   await page.keyboard.press('Enter');
+  // Up from the end, past the Color scheme section.
   await page.keyboard.press('End');
-  await expect(item('System Mono')).toBeFocused();
+  while (!(await item('System Mono').evaluate((element) => element.matches(':focus')))) {
+    await page.keyboard.press('ArrowUp');
+  }
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
   await page.keyboard.press('ArrowUp');
   await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
@@ -449,7 +452,7 @@ test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitemradio', { name: 'Cascadia Code' })).toBeFocused();
   await page.keyboard.press('End');
-  await expect(page.getByRole('menuitemradio', { name: 'System Mono' })).toBeFocused();
+  await expect(page.getByRole('menuitemradio', { name: 'Catppuccin Latte' })).toBeFocused();
   await page.keyboard.press('Home');
   await expect(wordWrap).toBeFocused();
   await page.keyboard.press(' ');
@@ -538,4 +541,152 @@ test("the editor's controls are in Inter, served from this site, whatever the So
   await expect
     .poll(() => page.locator('source-editor .cm-content').evaluate((element) => getComputedStyle(element).fontFamily))
     .toMatch(/^"?Cascadia Code"?,/);
+});
+
+/** The background of the Source and of the toolbar above it, and the colour of the toolbar's text. */
+const sourceColours = (page: Page) => async () => ({
+  source: await page.locator('source-editor .cm-editor').evaluate((element) => getComputedStyle(element).backgroundColor),
+  toolbar: await page.locator('.source > header').evaluate((element) => getComputedStyle(element).backgroundColor),
+  text: await page.getByRole('button', { name: 'Settings', exact: true }).evaluate((element) => getComputedStyle(element).color),
+});
+
+const GRUVBOX = { source: 'rgb(40, 40, 40)', toolbar: 'rgb(40, 40, 40)', text: 'rgb(235, 219, 178)' };
+const SOLARIZED_LIGHT = { source: 'rgb(253, 246, 227)', toolbar: 'rgb(253, 246, 227)', text: 'rgb(101, 123, 131)' };
+
+test('the Color scheme section picks the colours of the Source and its toolbar, and they stay as set', async ({
+  editor,
+  page,
+}) => {
+  await expect(editor.sourceBox).toBeVisible();
+  const colours = sourceColours(page);
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
+  const schemes = menu.getByRole('group', { name: 'Color scheme' });
+  const defaultLight = { source: 'rgb(246, 248, 250)', toolbar: 'rgb(246, 248, 250)', text: 'rgb(31, 35, 40)' };
+  await expect.poll(colours).toEqual(defaultLight);
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(schemes.getByRole('menuitemradio')).toHaveText([
+    'Default',
+    'Rosé Pine',
+    'Rosé Pine Dawn',
+    'Everforest',
+    'Evergarden',
+    'Gruvbox',
+    'Solarized Dark',
+    'Solarized Light',
+    'Catppuccin Latte',
+  ]);
+  await expect(schemes.getByRole('menuitemradio', { name: 'Default' })).toBeChecked();
+  await schemes.getByRole('menuitemradio', { name: 'Gruvbox' }).click();
+  await expect(menu).toBeHidden();
+  await expect.poll(colours).toEqual(GRUVBOX);
+  // Its tokens reach the highlighting too: Gruvbox's tags are aqua.
+  await editor.setSource('<p>one</p>');
+  await expect(page.locator('source-editor .cm-line span').first()).toHaveCSS('color', 'rgb(142, 192, 124)');
+
+  // The menu keeps the editor's colours.
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(menu).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await page.keyboard.press('Escape');
+
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(colours).toEqual(GRUVBOX);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(schemes.getByRole('menuitemradio', { name: 'Gruvbox' })).toBeChecked();
+  await schemes.getByRole('menuitemradio', { name: 'Default' }).click();
+  await expect.poll(colours).toEqual(defaultLight);
+});
+
+test('a light Editor Color Scheme stays light, and Default follows the system, in dark mode', async ({ editor, page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(editor.sourceBox).toBeVisible();
+  const colours = sourceColours(page);
+  await expect.poll(colours).toEqual({ source: 'rgb(21, 27, 35)', toolbar: 'rgb(21, 27, 35)', text: 'rgb(230, 237, 243)' });
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'Solarized Light' }).click();
+  await expect.poll(colours).toEqual(SOLARIZED_LIGHT);
+  // As are the scrollbars.
+  await expect(page.locator('source-editor')).toHaveCSS('color-scheme', 'light');
+});
+
+test('every Editor Color Scheme reads well, its toolbar on the Source', async ({ editor, page }) => {
+  await expect(editor.sourceBox).toBeVisible();
+  const colours = sourceColours(page);
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
+  await settings.click();
+  const names = await page.getByRole('group', { name: 'Color scheme' }).getByRole('menuitemradio').allTextContents();
+  await page.keyboard.press('Escape');
+  for (const name of names) {
+    await settings.click();
+    await page.getByRole('menuitemradio', { name, exact: true }).click();
+    await expect.poll(async () => (await colours()).toolbar, name).toBe((await colours()).source);
+    const { source, text } = await colours();
+    // Solarized Light's own text, the faintest, is 4.1:1.
+    expect(contrast(source, text), `${name}'s text`).toBeGreaterThanOrEqual(4);
+  }
+});
+
+/** The contrast ratio of two `rgb()` colours, from 1 to 21. */
+function contrast(a: string, b: string) {
+  const luminance = (colour: string) => {
+    const [r, g, b] = colour.match(/\d+/g)!.map((channel) => {
+      const value = Number(channel) / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (lighter! + 0.05) / (darker! + 0.05);
+}
+
+test('tries on each Editor Color Scheme under the pointer or the keyboard, and puts back the chosen one', async ({
+  editor,
+  page,
+}) => {
+  await expect(editor.sourceBox).toBeVisible();
+  const colours = sourceColours(page);
+  const before = await colours();
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
+  const item = (name: string) => menu.getByRole('menuitemradio', { name, exact: true });
+
+  await settings.click();
+  await item('Gruvbox').hover();
+  await expect.poll(colours).toEqual(GRUVBOX);
+  await item('Solarized Light').hover();
+  await expect.poll(colours).toEqual(SOLARIZED_LIGHT);
+  // Leaving the schemes puts back the chosen one, to compare.
+  await menu.getByRole('menuitemcheckbox', { name: 'Word wrap' }).hover();
+  await expect(menu).toBeVisible();
+  await expect.poll(colours).toEqual(before);
+
+  // As does Escape.
+  await item('Gruvbox').hover();
+  await expect.poll(colours).toEqual(GRUVBOX);
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect.poll(colours).toEqual(before);
+
+  // From the keyboard, Enter chooses.
+  await settings.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await page.keyboard.press('ArrowUp');
+  await expect(item('Solarized Light')).toBeFocused();
+  await expect.poll(colours).toEqual(SOLARIZED_LIGHT);
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeHidden();
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await expect.poll(colours).toEqual(SOLARIZED_LIGHT);
+});
+
+test('starts on Default when the saved Editor Color Scheme is gone', async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:editor-color-scheme', 'monokai'));
+  await page.reload();
+  await expect(editor.sourceBox).toBeVisible();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('menuitemradio', { name: 'Default' })).toBeChecked();
 });

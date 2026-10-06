@@ -28,6 +28,10 @@ _Avoid_: typeface, preview theme
 The monospace font the Source is shown in: Cascadia Code (the default), Cascadia Mono, Fira Code or JetBrains Mono, bundled with graphix, or System Mono, the system's own. While the editor's settings menu is open, the Source tries on the font under the pointer or the keyboard's focus.
 _Avoid_: code font, system font
 
+**Editor Color Scheme**:
+The colours the Source and its toolbar are shown in: Default, the editor's own, light or dark to match the user's colour scheme, or one drawn from a well-known palette (Rosé Pine, Rosé Pine Dawn, Everforest, Evergarden, Gruvbox, Solarized Dark, Solarized Light or Catppuccin Latte), which stays light or dark whatever the system's. The rest of the editor, its menus included, keeps Default's. While the editor's settings menu is open, the Source tries on the scheme under the pointer or the keyboard's focus, as it does an Editor Font.
+_Avoid_: theme, editor theme
+
 **Diagram**:
 A `<gx-mermaid>` element in the Source, drawn from the Mermaid text inside it.
 _Avoid_: chart, graph

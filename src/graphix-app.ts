@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { Minus, Plus, Settings } from 'lucide';
 import './context-menu.js';
 import './preview-pane.js';
@@ -8,6 +9,13 @@ import './source-editor.js';
 import './split-pane.js';
 import { DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import type { MenuItem } from './context-menu.js';
+import {
+  DEFAULT_EDITOR_COLOR_SCHEME,
+  EDITOR_COLOR_SCHEMES,
+  type EditorColorSchemeId,
+  editorColorScheme,
+  isEditorColorSchemeId,
+} from './editor-color-scheme.js';
 import { DEFAULT_EDITOR_FONT, EDITOR_FONTS, type EditorFontId, isEditorFontId } from './editor-font.js';
 import { icon } from './icon.js';
 import { DEFAULT_PREVIEW_FONT, isPreviewFontId } from './preview-font.js';
@@ -22,6 +30,7 @@ const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
 const EDITOR_FONT_STORAGE_KEY = 'graphix:editor-font';
 /** Where the Use system font setting, which Editor Font replaced, was kept. */
 const SYSTEM_FONT_STORAGE_KEY = 'graphix:system-font';
+const EDITOR_COLOR_SCHEME_STORAGE_KEY = 'graphix:editor-color-scheme';
 const TEXT_SIZE_STORAGE_KEY = 'graphix:text-size';
 const VIM_MODE_STORAGE_KEY = 'graphix:vim-mode';
 
@@ -178,6 +187,16 @@ export class GraphixApp extends LitElement {
   /** The Editor Font being tried on from the open menu, shown in place of `editorFont` until one is chosen. */
   @state() tryingOnEditorFont?: EditorFontId;
 
+  /** The colours the Source and its toolbar are shown in. */
+  @state() editorColorScheme = load(
+    EDITOR_COLOR_SCHEME_STORAGE_KEY,
+    (saved) => (isEditorColorSchemeId(saved) ? saved : undefined),
+    DEFAULT_EDITOR_COLOR_SCHEME,
+  );
+
+  /** The Editor Color Scheme being tried on from the open menu, shown in place of `editorColorScheme` until one is chosen. */
+  @state() tryingOnEditorColorScheme?: EditorColorSchemeId;
+
   /** The Source's text size, in px. */
   @state() textSize = load(TEXT_SIZE_STORAGE_KEY, parseTextSize, defaultTextSize());
 
@@ -255,9 +274,11 @@ export class GraphixApp extends LitElement {
     this.tryingOnEditorFont = undefined;
   }
 
-  /** Closed without a choice, the menu puts back the Editor Font that was chosen. */
+  /** Closed without a choice, the menu puts back the Editor Font and Editor Color Scheme that were chosen. */
   #onSettingsMenuToggle(event: ToggleEvent) {
-    if (event.newState === 'closed') this.tryingOnEditorFont = undefined;
+    if (event.newState !== 'closed') return;
+    this.tryingOnEditorFont = undefined;
+    this.tryingOnEditorColorScheme = undefined;
   }
 
   #onEditorFontSelect(event: Event) {
@@ -265,6 +286,24 @@ export class GraphixApp extends LitElement {
     if (!isEditorFontId(value)) return;
     this.editorFont = value;
     save(EDITOR_FONT_STORAGE_KEY, this.editorFont);
+  }
+
+  /** Tries on the Editor Color Scheme whose item has focus, from the pointer or the arrow keys. */
+  #onEditorColorSchemeFocus(event: FocusEvent) {
+    const { value } = event.target as MenuItem;
+    if (isEditorColorSchemeId(value)) this.tryingOnEditorColorScheme = value;
+  }
+
+  /** Leaving the schemes, the pointer puts back the chosen Editor Color Scheme, to compare it with the ones tried on. */
+  #onEditorColorSchemesLeave() {
+    this.tryingOnEditorColorScheme = undefined;
+  }
+
+  #onEditorColorSchemeSelect(event: Event) {
+    const { value } = event.target as MenuItem;
+    if (!isEditorColorSchemeId(value)) return;
+    this.editorColorScheme = value;
+    save(EDITOR_COLOR_SCHEME_STORAGE_KEY, this.editorColorScheme);
   }
 
   #onVimModeSelect(event: Event) {
@@ -278,13 +317,18 @@ export class GraphixApp extends LitElement {
   }
 
   render() {
+    const colorScheme = this.tryingOnEditorColorScheme ?? this.editorColorScheme;
+    // The toolbar sits on the Source, in its colours; the menu keeps the editor's.
+    const { colors } = editorColorScheme(colorScheme);
     return html`
       <split-pane
         orientation=${this.narrow ? 'vertical' : 'horizontal'}
         storage-key="graphix:split"
       >
         <div class="source">
-          <header>
+          <header
+            style=${styleMap({ '--toolbar-background': colors?.['--surface'], '--toolbar-text': colors?.['--fg'] })}
+          >
             <button
               type="button"
               class="icon-button"
@@ -339,12 +383,26 @@ export class GraphixApp extends LitElement {
                     html`<menu-item type="radio" value=${id} .checked=${id === this.editorFont}>${label}</menu-item>`,
                 )}
               </menu-group>
+              <menu-group
+                label="Color scheme"
+                @focusin=${this.#onEditorColorSchemeFocus}
+                @menu-select=${this.#onEditorColorSchemeSelect}
+                @pointerleave=${this.#onEditorColorSchemesLeave}
+              >
+                ${EDITOR_COLOR_SCHEMES.map(
+                  ({ id, label }) =>
+                    html`<menu-item type="radio" value=${id} .checked=${id === this.editorColorScheme}
+                      >${label}</menu-item
+                    >`,
+                )}
+              </menu-group>
             </context-menu>
           </header>
           <source-editor
             .value=${this.source}
             .wordWrap=${this.wordWrap}
             .editorFont=${this.tryingOnEditorFont ?? this.editorFont}
+            .colorScheme=${colorScheme}
             .textSize=${this.textSize}
             .vimMode=${this.vimMode}
             @source-input=${this.#onInput}

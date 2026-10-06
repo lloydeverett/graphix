@@ -55,7 +55,10 @@ editor or the Preview; tests that expect some declare them with
   `--editor-system-font-family`). Put media queries in `theme.css`: a rule
   nested in `@media` inside `EditorView.theme` didn't take effect. On touch
   screens the editor's text starts at 16px, or mobile browsers zoom in when
-  it's focused.
+  it's focused. Each Editor Color Scheme in `src/editor-color-scheme.ts` sets
+  those colour tokens on `<source-editor>` itself, so a colour the editor
+  draws from `theme.css` needs a value in every scheme too, or it keeps
+  Default's under them all.
 - `src/split-pane.ts` (`<split-pane>`, `<split-divider>`) has no shadow root
   either; it adds its styles to the root it's placed in. The consumer lays out
   the children and puts a `<split-divider>` between two of them. While

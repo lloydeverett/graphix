@@ -6,9 +6,14 @@ import { getCM, vim } from '@replit/codemirror-vim';
 import { EditorView, basicSetup } from 'codemirror';
 import { LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import {
+  DEFAULT_EDITOR_COLOR_SCHEME,
+  type EditorColorSchemeId,
+  editorColorScheme,
+} from './editor-color-scheme.js';
 import { DEFAULT_EDITOR_FONT, type EditorFontId, editorFontFamily } from './editor-font.js';
 
-/** Colours come from theme.css, so they follow the light and dark themes. */
+/** Colours come from theme.css's tokens, so they follow the light and dark themes, and the Editor Color Scheme. */
 const highlightStyle = HighlightStyle.define([
   { tag: [tags.tagName, tags.angleBracket], color: 'var(--syntax-tag)' },
   { tag: [tags.attributeName, tags.propertyName, tags.number], color: 'var(--syntax-attribute)' },
@@ -58,44 +63,42 @@ const theme = EditorView.theme({
 });
 
 /**
- * The dark theme's colours for CodeMirror's tooltips, fields and buttons,
- * which are otherwise its own. The light theme keeps CodeMirror's colours.
+ * The theme's colours for CodeMirror's tooltips, fields and buttons, which
+ * are otherwise its own: for Default's dark theme, and every other Editor
+ * Color Scheme. Default's light theme keeps CodeMirror's colours.
  */
-const darkTheme = EditorView.theme(
-  {
-    '.cm-tooltip': {
-      background: 'var(--surface)',
-      color: 'var(--fg)',
-      border: '1px solid var(--border)',
-    },
-    '.cm-tooltip-section:not(:first-child)': { borderTop: '1px solid var(--border)' },
-    '.cm-tooltip .cm-tooltip-arrow': {
-      '&:before': { borderTopColor: 'var(--border)', borderBottomColor: 'var(--border)' },
-      '&:after': { borderTopColor: 'var(--surface)', borderBottomColor: 'var(--surface)' },
-    },
-    '.cm-tooltip-autocomplete ul li[aria-selected]': {
-      background: 'var(--selection)',
-      color: 'var(--fg)',
-    },
-    // A search's fields and buttons, like the toolbar's.
-    '.cm-textfield': {
-      background: 'var(--bg)',
-      border: '1px solid var(--border)',
-    },
-    '.cm-button': {
-      background: 'var(--bg)',
-      border: '1px solid var(--border)',
-      '&:active': { background: 'var(--active-line)' },
-    },
-    // What stands in for folded lines, which CodeMirror colours light in either theme.
-    '.cm-foldPlaceholder': {
-      background: 'var(--bg)',
-      border: '1px solid var(--border)',
-      color: 'var(--syntax-comment)',
-    },
+const controlsTheme = EditorView.theme({
+  '.cm-tooltip': {
+    background: 'var(--surface)',
+    color: 'var(--fg)',
+    border: '1px solid var(--border)',
   },
-  { dark: true },
-);
+  '.cm-tooltip-section:not(:first-child)': { borderTop: '1px solid var(--border)' },
+  '.cm-tooltip .cm-tooltip-arrow': {
+    '&:before': { borderTopColor: 'var(--border)', borderBottomColor: 'var(--border)' },
+    '&:after': { borderTopColor: 'var(--surface)', borderBottomColor: 'var(--surface)' },
+  },
+  '.cm-tooltip-autocomplete ul li[aria-selected]': {
+    background: 'var(--selection)',
+    color: 'var(--fg)',
+  },
+  // A search's fields and buttons, like the toolbar's.
+  '.cm-textfield': {
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+  },
+  '.cm-button': {
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    '&:active': { background: 'var(--active-line)' },
+  },
+  // What stands in for folded lines, which CodeMirror colours light in either theme.
+  '.cm-foldPlaceholder': {
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    color: 'var(--syntax-comment)',
+  },
+});
 
 /** Whether the page is in its dark theme, as theme.css decides it. */
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
@@ -141,6 +144,9 @@ export class SourceEditor extends LitElement {
   /** The font to show the Source in. */
   @property() editorFont: EditorFontId = DEFAULT_EDITOR_FONT;
 
+  /** The colours to show the Source in. */
+  @property() colorScheme: EditorColorSchemeId = DEFAULT_EDITOR_COLOR_SCHEME;
+
   /** The text size, in px. */
   @property({ type: Number }) textSize = 14;
 
@@ -150,7 +156,7 @@ export class SourceEditor extends LitElement {
   #wordWrapCompartment = new Compartment();
   #fontCompartment = new Compartment();
   #vimCompartment = new Compartment();
-  #darkCompartment = new Compartment();
+  #colorSchemeCompartment = new Compartment();
 
   #view?: EditorView;
 
@@ -185,7 +191,7 @@ export class SourceEditor extends LitElement {
         syntaxHighlighting(highlightStyle),
         this.#wordWrapCompartment.of(this.#wordWrapExtension()),
         this.#fontCompartment.of(this.#fontTheme()),
-        this.#darkCompartment.of(this.#darkExtension()),
+        this.#colorSchemeCompartment.of(this.#colorSchemeExtension()),
         EditorView.contentAttributes.of({ 'aria-label': 'HTML source', spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || this.#applyingValue) return;
@@ -204,14 +210,27 @@ export class SourceEditor extends LitElement {
     this.#view = undefined;
   }
 
-  /** In the dark theme, `darkTheme`, which also has CodeMirror use its dark colours. */
-  #darkExtension() {
-    return darkQuery.matches ? darkTheme : [];
+  /** Has CodeMirror use its dark or light colours to match the Editor Color Scheme, and `controlsTheme` but in Default's light theme. */
+  #colorSchemeExtension() {
+    const { dark = darkQuery.matches, colors } = editorColorScheme(this.colorScheme);
+    return [dark || colors ? controlsTheme : [], EditorView.darkTheme.of(dark)];
   }
 
   #onColorScheme = () => {
-    this.#view?.dispatch({ effects: this.#darkCompartment.reconfigure(this.#darkExtension()) });
+    this.#view?.dispatch({ effects: this.#colorSchemeCompartment.reconfigure(this.#colorSchemeExtension()) });
   };
+
+  /**
+   * Sets the Editor Color Scheme's colours on this element, over theme.css's,
+   * for everything inside it to take up; Default sets none. Its
+   * `color-scheme` gives scrollbars and the like its lightness too.
+   */
+  #applyColorScheme() {
+    const { dark, colors } = editorColorScheme(this.colorScheme);
+    for (const name of [...this.style]) if (name.startsWith('--')) this.style.removeProperty(name);
+    for (const [name, value] of Object.entries(colors ?? {})) this.style.setProperty(name, value);
+    this.style.colorScheme = dark === undefined ? '' : dark ? 'dark' : 'light';
+  }
 
   #wordWrapExtension() {
     return this.wordWrap ? EditorView.lineWrapping : [];
@@ -249,6 +268,10 @@ export class SourceEditor extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
+    if (changed.has('colorScheme')) {
+      this.#applyColorScheme();
+      this.#onColorScheme();
+    }
     if (changed.has('textSize') || changed.has('editorFont')) {
       this.#view?.dispatch({ effects: this.#fontCompartment.reconfigure(this.#fontTheme()) });
     }
