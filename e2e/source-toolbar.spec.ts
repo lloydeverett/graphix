@@ -211,11 +211,13 @@ test('tries on each Editor Font under the pointer or the keyboard, and puts back
   // From the keyboard, Enter chooses.
   await settings.focus();
   await page.keyboard.press('Enter');
+  // The menu focuses its first item as it opens; wait for that, or it can take focus back from End.
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Word wrap' })).toBeFocused();
   // Up from the end, past the Color scheme section.
   await page.keyboard.press('End');
-  while (!(await item('System Mono').evaluate((element) => element.matches(':focus')))) {
-    await page.keyboard.press('ArrowUp');
-  }
+  const schemes = await menu.getByRole('group', { name: 'Color scheme' }).getByRole('menuitemradio').count();
+  for (let step = 0; step < schemes; step++) await page.keyboard.press('ArrowUp');
+  await expect(item('System Mono')).toBeFocused();
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
   await page.keyboard.press('ArrowUp');
   await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
@@ -672,6 +674,8 @@ test('tries on each Editor Color Scheme under the pointer or the keyboard, and p
   // From the keyboard, Enter chooses.
   await settings.focus();
   await page.keyboard.press('Enter');
+  // The menu focuses its first item as it opens; wait for that, or it can take focus back from End.
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Word wrap' })).toBeFocused();
   await page.keyboard.press('End');
   await page.keyboard.press('ArrowUp');
   await expect(item('Solarized Light')).toBeFocused();

@@ -8,8 +8,9 @@ import { LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import {
   DEFAULT_EDITOR_COLOR_SCHEME,
+  EDITOR_COLOR_TOKENS,
   type EditorColorSchemeId,
-  editorColorScheme,
+  findEditorColorScheme,
 } from './editor-color-scheme.js';
 import { DEFAULT_EDITOR_FONT, type EditorFontId, editorFontFamily } from './editor-font.js';
 
@@ -145,7 +146,7 @@ export class SourceEditor extends LitElement {
   @property() editorFont: EditorFontId = DEFAULT_EDITOR_FONT;
 
   /** The colours to show the Source in. */
-  @property() colorScheme: EditorColorSchemeId = DEFAULT_EDITOR_COLOR_SCHEME;
+  @property() editorColorScheme: EditorColorSchemeId = DEFAULT_EDITOR_COLOR_SCHEME;
 
   /** The text size, in px. */
   @property({ type: Number }) textSize = 14;
@@ -179,7 +180,7 @@ export class SourceEditor extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    darkQuery.addEventListener('change', this.#onColorScheme);
+    darkQuery.addEventListener('change', this.#reconfigureColorScheme);
     this.#view ??= new EditorView({
       parent: this,
       doc: this.value,
@@ -205,18 +206,19 @@ export class SourceEditor extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    darkQuery.removeEventListener('change', this.#onColorScheme);
+    darkQuery.removeEventListener('change', this.#reconfigureColorScheme);
     this.#view?.destroy();
     this.#view = undefined;
   }
 
   /** Has CodeMirror use its dark or light colours to match the Editor Color Scheme, and `controlsTheme` but in Default's light theme. */
   #colorSchemeExtension() {
-    const { dark = darkQuery.matches, colors } = editorColorScheme(this.colorScheme);
+    const { dark = darkQuery.matches, colors } = findEditorColorScheme(this.editorColorScheme);
     return [dark || colors ? controlsTheme : [], EditorView.darkTheme.of(dark)];
   }
 
-  #onColorScheme = () => {
+  /** Called as the Editor Color Scheme changes, and as the system's does, which Default follows. */
+  #reconfigureColorScheme = () => {
     this.#view?.dispatch({ effects: this.#colorSchemeCompartment.reconfigure(this.#colorSchemeExtension()) });
   };
 
@@ -226,8 +228,8 @@ export class SourceEditor extends LitElement {
    * `color-scheme` gives scrollbars and the like its lightness too.
    */
   #applyColorScheme() {
-    const { dark, colors } = editorColorScheme(this.colorScheme);
-    for (const name of [...this.style]) if (name.startsWith('--')) this.style.removeProperty(name);
+    const { dark, colors } = findEditorColorScheme(this.editorColorScheme);
+    for (const name of EDITOR_COLOR_TOKENS) this.style.removeProperty(name);
     for (const [name, value] of Object.entries(colors ?? {})) this.style.setProperty(name, value);
     this.style.colorScheme = dark === undefined ? '' : dark ? 'dark' : 'light';
   }
@@ -268,9 +270,9 @@ export class SourceEditor extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('colorScheme')) {
+    if (changed.has('editorColorScheme')) {
       this.#applyColorScheme();
-      this.#onColorScheme();
+      this.#reconfigureColorScheme();
     }
     if (changed.has('textSize') || changed.has('editorFont')) {
       this.#view?.dispatch({ effects: this.#fontCompartment.reconfigure(this.#fontTheme()) });

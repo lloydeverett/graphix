@@ -12,24 +12,25 @@
  *   comments (and line numbers) and keywords (as in `<!DOCTYPE>`)
  * - `--error-fg`: what can't be parsed
  */
-type EditorColors = Record<
-  | '--surface'
-  | '--bg'
-  | '--fg'
-  | '--border'
-  | '--selection'
-  | '--active-line'
-  | '--selection-match'
-  | '--search-match'
-  | '--search-match-outline'
-  | '--syntax-tag'
-  | '--syntax-attribute'
-  | '--syntax-string'
-  | '--syntax-comment'
-  | '--syntax-keyword'
-  | '--error-fg',
-  string
->;
+export const EDITOR_COLOR_TOKENS = [
+  '--surface',
+  '--bg',
+  '--fg',
+  '--border',
+  '--selection',
+  '--active-line',
+  '--selection-match',
+  '--search-match',
+  '--search-match-outline',
+  '--syntax-tag',
+  '--syntax-attribute',
+  '--syntax-string',
+  '--syntax-comment',
+  '--syntax-keyword',
+  '--error-fg',
+] as const;
+
+type EditorColors = Record<(typeof EDITOR_COLOR_TOKENS)[number], string>;
 
 type EditorColorScheme = {
   id: string;
@@ -172,7 +173,7 @@ export const EDITOR_COLOR_SCHEMES = [
       '--surface': '#002b36', // base03
       '--bg': '#073642', // base02
       '--fg': '#839496', // base0
-      '--border': '#073642', // base02
+      '--border': '#586e75', // base01
       '--selection': '#274642',
       '--active-line': '#93a1a114', // base1
       '--selection-match': '#2aa19833', // cyan
@@ -222,8 +223,8 @@ export const EDITOR_COLOR_SCHEMES = [
       '--selection-match': '#40a02b26', // green
       '--search-match': '#df8e1d40', // yellow
       '--search-match-outline': '#df8e1d', // yellow
-      '--syntax-tag': '#8839ef', // mauve
-      '--syntax-attribute': '#179299', // teal
+      '--syntax-tag': '#1e66f5', // blue
+      '--syntax-attribute': '#df8e1d', // yellow
       '--syntax-string': '#40a02b', // green
       '--syntax-comment': '#7c7f93', // overlay2
       '--syntax-keyword': '#8839ef', // mauve
@@ -240,6 +241,6 @@ export function isEditorColorSchemeId(value: unknown): value is EditorColorSchem
   return EDITOR_COLOR_SCHEMES.some((scheme) => scheme.id === value);
 }
 
-export function editorColorScheme(id: EditorColorSchemeId): EditorColorScheme {
+export function findEditorColorScheme(id: EditorColorSchemeId): EditorColorScheme {
   return EDITOR_COLOR_SCHEMES.find((scheme) => scheme.id === id)!;
 }

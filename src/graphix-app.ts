@@ -13,7 +13,7 @@ import {
   DEFAULT_EDITOR_COLOR_SCHEME,
   EDITOR_COLOR_SCHEMES,
   type EditorColorSchemeId,
-  editorColorScheme,
+  findEditorColorScheme,
   isEditorColorSchemeId,
 } from './editor-color-scheme.js';
 import { DEFAULT_EDITOR_FONT, EDITOR_FONTS, type EditorFontId, isEditorFontId } from './editor-font.js';
@@ -317,9 +317,9 @@ export class GraphixApp extends LitElement {
   }
 
   render() {
-    const colorScheme = this.tryingOnEditorColorScheme ?? this.editorColorScheme;
+    const shownColorScheme = this.tryingOnEditorColorScheme ?? this.editorColorScheme;
     // The toolbar sits on the Source, in its colours; the menu keeps the editor's.
-    const { colors } = editorColorScheme(colorScheme);
+    const { colors } = findEditorColorScheme(shownColorScheme);
     return html`
       <split-pane
         orientation=${this.narrow ? 'vertical' : 'horizontal'}
@@ -402,7 +402,7 @@ export class GraphixApp extends LitElement {
             .value=${this.source}
             .wordWrap=${this.wordWrap}
             .editorFont=${this.tryingOnEditorFont ?? this.editorFont}
-            .colorScheme=${colorScheme}
+            .editorColorScheme=${shownColorScheme}
             .textSize=${this.textSize}
             .vimMode=${this.vimMode}
             @source-input=${this.#onInput}
