@@ -329,6 +329,7 @@ export class GraphixApp extends LitElement {
           <header
             style=${styleMap({ '--toolbar-background': colors?.['--surface'], '--toolbar-text': colors?.['--fg'] })}
           >
+            <span>HTML, MD or JS</span>
             <button
               type="button"
               class="icon-button"
