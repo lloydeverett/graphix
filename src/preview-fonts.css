@@ -1,0 +1,22 @@
+/*
+ * The Preview Font, over the Base Style's, chosen by the root's
+ * `data-preview-font`. The Preview links this after the Base Style, so these
+ * rules win over the Base Style's that are as specific, such as `h1`, but
+ * lose to the Source's own styles. Code stays in the Base Style's monospace
+ * font, and Diagrams in Mermaid's.
+ */
+@import './fonts/lato/lato.css';
+@import './fonts/inter/inter.css';
+
+:root[data-preview-font='lato'] {
+  --graphix-preview-font: 'Lato', sans-serif;
+}
+
+:root[data-preview-font='inter'] {
+  --graphix-preview-font: 'Inter', sans-serif;
+}
+
+:where(:root:not([data-preview-font='system'])) body,
+:where(:root:not([data-preview-font='system']) body) :not(code, kbd, samp, pre, pre *, svg *) {
+  font-family: var(--graphix-preview-font);
+}

@@ -9,12 +9,14 @@ import './split-pane.js';
 import { DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import type { MenuItem } from './context-menu.js';
 import { icon } from './icon.js';
+import { DEFAULT_PREVIEW_FONT, isPreviewFontId } from './preview-font.js';
 import type { PreviewPane } from './preview-pane.js';
 import type { SourceEditor } from './source-editor.js';
 import { toolbarStyles } from './toolbar-styles.js';
 
 const SOURCE_STORAGE_KEY = 'graphix:source';
 const BASE_STYLE_STORAGE_KEY = 'graphix:base-style';
+const PREVIEW_FONT_STORAGE_KEY = 'graphix:preview-font';
 const WORD_WRAP_STORAGE_KEY = 'graphix:word-wrap';
 const SYSTEM_FONT_STORAGE_KEY = 'graphix:system-font';
 const TEXT_SIZE_STORAGE_KEY = 'graphix:text-size';
@@ -153,6 +155,13 @@ export class GraphixApp extends LitElement {
     DEFAULT_BASE_STYLE,
   );
 
+  /** The font the Preview's text is shown in, over the Base Style's. */
+  @state() previewFont = load(
+    PREVIEW_FONT_STORAGE_KEY,
+    (saved) => (isPreviewFontId(saved) ? saved : undefined),
+    DEFAULT_PREVIEW_FONT,
+  );
+
   /** Whether long lines in the Source wrap. */
   @state() wordWrap = loadFlag(WORD_WRAP_STORAGE_KEY, true);
 
@@ -213,6 +222,11 @@ export class GraphixApp extends LitElement {
   #onBaseStyleChange(event: Event) {
     this.baseStyle = (event.target as PreviewPane).baseStyle;
     save(BASE_STYLE_STORAGE_KEY, this.baseStyle);
+  }
+
+  #onPreviewFontChange(event: Event) {
+    this.previewFont = (event.target as PreviewPane).previewFont;
+    save(PREVIEW_FONT_STORAGE_KEY, this.previewFont);
   }
 
   #onWordWrapSelect(event: Event) {
@@ -301,7 +315,9 @@ export class GraphixApp extends LitElement {
         <preview-pane
           .source=${this.source}
           .baseStyle=${this.baseStyle}
+          .previewFont=${this.previewFont}
           @base-style-change=${this.#onBaseStyleChange}
+          @preview-font-change=${this.#onPreviewFontChange}
         ></preview-pane>
       </split-pane>
     `;

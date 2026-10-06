@@ -5,10 +5,12 @@ import './gx-mermaid.js';
 import './gx-pan.js';
 import './gx-tree-node.js';
 import { morphChildren } from './morph.js';
+import { DEFAULT_PREVIEW_FONT, type PreviewFontId, isPreviewFontId } from './preview-font.js';
 import {
   type PageColorsMessage,
   type ReadyMessage,
   isBaseStyleMessage,
+  isPreviewFontMessage,
   isSourceMessage,
 } from './preview-protocol.js';
 
@@ -54,6 +56,18 @@ function reportPageColors() {
   channel.port1.postMessage(message);
 }
 
+/**
+ * The Preview Font's stylesheet. The Base Style's go before it, so its rules
+ * win over theirs.
+ */
+const previewFontLink = document.createElement('link');
+previewFontLink.rel = 'stylesheet';
+previewFontLink.href = new URL('./preview-fonts.css', import.meta.url).href;
+
+function showPreviewFont(id: PreviewFontId) {
+  document.documentElement.dataset.previewFont = id;
+}
+
 /** The links to the shown Base Style's stylesheets; preview.html starts with none. */
 let baseStyleLinks: HTMLLinkElement[] = [];
 
@@ -97,7 +111,7 @@ async function showBaseStyle(id: BaseStyleId) {
   });
   // A stylesheet loads even when its media doesn't match, so wait for all.
   const loading = Promise.all(links.map(loaded));
-  document.head.append(...links);
+  previewFontLink.before(...links);
   try {
     await loading;
   } catch {
@@ -113,11 +127,16 @@ async function showBaseStyle(id: BaseStyleId) {
 const params = new URLSearchParams(location.search);
 document.documentElement.dataset.baseStyle = shownStyle;
 const initialStyle = params.get('base-style');
+const initialFont = params.get('preview-font');
+showPreviewFont(isPreviewFontId(initialFont) ? initialFont : DEFAULT_PREVIEW_FONT);
+const previewFontLoading = loaded(previewFontLink);
+document.head.append(previewFontLink);
 
 const channel = new MessageChannel();
 channel.port1.onmessage = (event) => {
   if (isSourceMessage(event.data)) showSource(event.data.source);
   if (isBaseStyleMessage(event.data)) showBaseStyle(event.data.baseStyle);
+  if (isPreviewFontMessage(event.data)) showPreviewFont(event.data.previewFont);
 };
 
 // water.css, for one, follows the colour scheme.
@@ -126,8 +145,12 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reportPage
 const nonce = params.get('nonce') ?? '';
 const ready: ReadyMessage = { type: 'graphix:ready', nonce };
 // The editor sends the Source once we're ready, so wait for the starting Base
-// Style, or the Source would show unstyled until it loads.
-showBaseStyle(isBaseStyleId(initialStyle) ? initialStyle : DEFAULT_BASE_STYLE).finally(() => {
+// Style and the Preview Font's stylesheet, or the Source would show unstyled
+// until they load.
+Promise.allSettled([
+  showBaseStyle(isBaseStyleId(initialStyle) ? initialStyle : DEFAULT_BASE_STYLE),
+  previewFontLoading,
+]).finally(() => {
   // Our origin is opaque, so the editor's origin can't be named here; the
   // message carries nothing but the nonce the editor already gave us.
   window.parent.postMessage(ready, '*', [channel.port2]);

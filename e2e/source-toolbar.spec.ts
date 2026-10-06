@@ -13,11 +13,11 @@ test('the Source has a toolbar the same height as the Preview', async ({ editor,
 
 test('Settings is an icon button that opens a menu', async ({ editor, page }) => {
   await expect(editor.sourceBox).toBeVisible();
-  const settings = page.getByRole('button', { name: 'Settings' });
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
   await expect(settings.locator('svg')).toBeVisible();
   await expect(settings).toHaveText('');
 
-  const menu = page.getByRole('menu', { name: 'Settings' });
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
   await expect(menu).toBeHidden();
   await settings.click();
   await expect(menu).toBeVisible();
@@ -34,8 +34,8 @@ test('Settings is an icon button that opens a menu', async ({ editor, page }) =>
 
 /** Checks the settings menu sits just below the gear, its right edge lined up with the gear's, over the Source. */
 async function expectMenuUnderGear(page: Page) {
-  const button = (await page.getByRole('button', { name: 'Settings' }).boundingBox())!;
-  const menu = (await page.getByRole('menu', { name: 'Settings' }).boundingBox())!;
+  const button = (await page.getByRole('button', { name: 'Settings', exact: true }).boundingBox())!;
+  const menu = (await page.getByRole('menu', { name: 'Settings', exact: true }).boundingBox())!;
   const source = (await page.locator('.source').boundingBox())!;
   expect(menu.y).toBeGreaterThan(button.y + button.height);
   expect(menu.y).toBeLessThan(button.y + button.height + 10);
@@ -46,11 +46,11 @@ async function expectMenuUnderGear(page: Page) {
 
 test('the settings menu follows the gear as the window resizes', async ({ editor, page }) => {
   await expect(editor.sourceBox).toBeVisible();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expectMenuUnderGear(page);
 
   await page.setViewportSize({ width: 900, height: 600 });
-  await expect(page.getByRole('menu', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('menu', { name: 'Settings', exact: true })).toBeVisible();
   await expectMenuUnderGear(page);
 });
 
@@ -59,15 +59,15 @@ test.describe('on a narrow screen', () => {
 
   test('the settings menu opens over the Source', async ({ editor, page }) => {
     await expect(editor.sourceBox).toBeVisible();
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expectMenuUnderGear(page);
   });
 });
 
 test('clicking in the Preview closes the settings menu', async ({ editor, page }) => {
   await expect(editor.preview.locator('h1')).toBeVisible();
-  const menu = page.getByRole('menu', { name: 'Settings' });
-  await page.getByRole('button', { name: 'Settings' }).click();
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(menu).toBeVisible();
 
   await editor.preview.locator('h1').click();
@@ -81,7 +81,7 @@ test('word wrap is on by default, and can be turned off and stays off', async ({
   const wordWrap = page.getByRole('menuitemcheckbox', { name: 'Word wrap' });
   await expect.poll(wraps).toBe(true);
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(wordWrap).toBeChecked();
   await wordWrap.click();
   await expect(wordWrap).toBeHidden();
@@ -90,7 +90,7 @@ test('word wrap is on by default, and can be turned off and stays off', async ({
   await page.reload();
   await expect(editor.sourceBox).toContainText('word word');
   await expect.poll(wraps).toBe(false);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(wordWrap).not.toBeChecked();
   await wordWrap.click();
   await expect.poll(wraps).toBe(true);
@@ -118,7 +118,7 @@ test('the Source is in Cascadia Mono, served from this site, unless Use system f
   const origin = new URL(page.url()).origin;
   for (const url of fontRequests) expect(new URL(url).origin).toBe(origin);
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(systemFont).not.toBeChecked();
   await systemFont.click();
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
@@ -126,7 +126,7 @@ test('the Source is in Cascadia Mono, served from this site, unless Use system f
   await page.reload();
   await expect(editor.sourceBox).toBeVisible();
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(systemFont).toBeChecked();
   await systemFont.click();
   await expect.poll(fontFamily).toMatch(/^"?Cascadia Mono"?,/);
@@ -164,7 +164,7 @@ test('Vim mode edits the Source with Vim keys, and stays as set', async ({ edito
   await page.keyboard.type('dd');
   await expect.poll(source).toBe('dd<p>one</p>\n<p>two</p>');
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(vimMode).not.toBeChecked();
   await vimMode.click();
   await editor.setSource('<p>one</p>\n<p>two</p>');
@@ -183,7 +183,7 @@ test('Vim mode edits the Source with Vim keys, and stays as set', async ({ edito
   await page.keyboard.press('Escape');
   await page.keyboard.type('ggx');
   await expect.poll(source).toBe('p>one</p>\n<p>two</p>');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(vimMode).toBeChecked();
   await vimMode.click();
   await editor.sourceBox.click();
@@ -211,7 +211,7 @@ test("Vim mode's block cursor is the text's colour, with the letter under it in 
   await expect.poll(colours).toEqual({ backgroundColor: fg, color: surface, letter: '<' });
 
   // Unfocused, it's an outline, and the letter beneath shows through.
-  await page.getByRole('button', { name: 'Settings' }).focus();
+  await page.getByRole('button', { name: 'Settings', exact: true }).focus();
   await expect.poll(colours).toEqual({ backgroundColor: 'rgba(0, 0, 0, 0)', color: 'rgba(0, 0, 0, 0)', letter: '<' });
 });
 
@@ -253,7 +253,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 }
 
 test('the text size can be stepped up and down, keeping the menu open, and stays as set', async ({ editor, page }) => {
-  const menu = page.getByRole('menu', { name: 'Settings' });
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
   const smaller = page.getByRole('menuitem', { name: 'Smaller text' });
   const larger = page.getByRole('menuitem', { name: 'Larger text' });
   const shown = menu.getByRole('status');
@@ -261,7 +261,7 @@ test('the text size can be stepped up and down, keeping the menu open, and stays
   await expect(editor.sourceBox).toBeVisible();
   await expect.poll(fontSize).toBe('14px');
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(shown).toHaveText('14');
   await larger.click();
   await larger.click();
@@ -275,7 +275,7 @@ test('the text size can be stepped up and down, keeping the menu open, and stays
   await page.reload();
   await expect(editor.sourceBox).toBeVisible();
   await expect.poll(fontSize).toBe('15px');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(shown).toHaveText('15');
 
   // It stops at the smallest size.
@@ -308,7 +308,7 @@ test('the line numbers follow the text as its size and font change', async ({ ed
   await editor.setSource(Array.from({ length: 20 }, (_, index) => `<p>${index}</p>`).join('\n'));
   await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   for (let step = 0; step < 6; step++) await page.getByRole('menuitem', { name: 'Larger text' }).click();
   await expect.poll(() => lineNumberDrift(page)).toBeLessThan(1);
   for (let step = 0; step < 8; step++) await page.getByRole('menuitem', { name: 'Smaller text' }).click();
@@ -319,8 +319,8 @@ test('the line numbers follow the text as its size and font change', async ({ ed
 
 test("the settings menu's text can't be selected", async ({ editor, page }) => {
   await expect(editor.sourceBox).toBeVisible();
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const menu = page.getByRole('menu', { name: 'Settings' });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
   for (const text of [menu.getByText('Text size', { exact: true }), menu.getByRole('status')]) {
     await text.dblclick();
     expect(await page.evaluate(() => getSelection()?.toString() ?? '')).toBe('');
@@ -333,8 +333,8 @@ test("the settings menu's text can't be selected", async ({ editor, page }) => {
 
 test('the settings menu works from the keyboard', async ({ editor, page }) => {
   await editor.setSource(LONG_LINE);
-  const settings = page.getByRole('button', { name: 'Settings' });
-  const menu = page.getByRole('menu', { name: 'Settings' });
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
+  const menu = page.getByRole('menu', { name: 'Settings', exact: true });
   const wordWrap = page.getByRole('menuitemcheckbox', { name: 'Word wrap' });
 
   await settings.focus();
@@ -401,7 +401,7 @@ test("Vim mode's prompts are in the Source's font, typed just after the prompt, 
     await page.keyboard.press('Escape');
   }
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('menuitemcheckbox', { name: 'Use system font' }).click();
   await editor.sourceBox.click();
   await page.keyboard.press('Escape');
@@ -409,4 +409,40 @@ test("Vim mode's prompts are in the Source's font, typed just after the prompt, 
   await expect.poll(async () => (await fonts()).input).toMatch(/^ui-monospace/);
   const { source, ...rest } = await fonts();
   expect(rest).toEqual({ prompt: source, input: source });
+});
+
+test("the editor's controls are in Inter, served from this site, whatever the Source's font", async ({
+  editor,
+  page,
+}) => {
+  await expect(editor.sourceBox).toBeVisible();
+  const interFamily = /^"?Inter"?,/;
+  const settings = page.getByRole('button', { name: 'Settings', exact: true });
+  await expect.poll(() => settings.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(interFamily);
+  await settings.click();
+  const wordWrap = page.getByRole('menuitemcheckbox', { name: 'Word wrap' });
+  await expect.poll(() => wordWrap.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(interFamily);
+  const previewSettings = page.getByRole('button', { name: 'Preview settings' });
+  await expect
+    .poll(() => previewSettings.evaluate((element) => getComputedStyle(element).fontFamily))
+    .toMatch(interFamily);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        await document.fonts.ready;
+        return [...document.fonts].some((face) => face.family.includes('Inter') && face.status === 'loaded');
+      }),
+    )
+    .toBe(true);
+
+  // A search's fields and buttons too, though the Source stays in Cascadia Mono.
+  await page.keyboard.press('Escape');
+  await editor.sourceBox.click();
+  await page.keyboard.press('ControlOrMeta+f');
+  const searchField = page.locator('source-editor .cm-search .cm-textfield').first();
+  await expect(searchField).toBeVisible();
+  await expect.poll(() => searchField.evaluate((element) => getComputedStyle(element).fontFamily)).toMatch(interFamily);
+  await expect
+    .poll(() => page.locator('source-editor .cm-content').evaluate((element) => getComputedStyle(element).fontFamily))
+    .toMatch(/^"?Cascadia Mono"?,/);
 });

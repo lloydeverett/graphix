@@ -58,6 +58,9 @@ The menu beside Refresh picks the preview's base stylesheet, from the classless
 ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
 `src/base-styles/README.md` lists their sources and licenses. It starts on
 **water.css** (the default): dark or light to match your colour scheme.
+The gear beside Refresh picks the preview's font, over the base stylesheet's:
+**Lato** (the default) or **Inter**, bundled with graphix, or **System** to keep
+the stylesheet's own. Code stays monospace, and your own CSS still wins.
 The gear above the editor opens its settings: turn **Word wrap** off to scroll
 long lines sideways instead, or **Vim mode** on to edit with Vim's keys.
 Settings are kept in the browser, like your HTML.

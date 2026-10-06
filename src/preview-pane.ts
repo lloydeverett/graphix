@@ -2,12 +2,19 @@ import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { ChevronDown, RefreshCw } from 'lucide';
+import { ChevronDown, RefreshCw, Settings } from 'lucide';
 import { BASE_STYLES, type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import './context-menu.js';
 import type { MenuItem } from './context-menu.js';
 import { icon } from './icon.js';
-import { type BaseStyleMessage, type SourceMessage, isPageColorsMessage, isReadyMessage } from './preview-protocol.js';
+import { DEFAULT_PREVIEW_FONT, PREVIEW_FONTS, type PreviewFontId, isPreviewFontId } from './preview-font.js';
+import {
+  type BaseStyleMessage,
+  type PreviewFontMessage,
+  type SourceMessage,
+  isPageColorsMessage,
+  isReadyMessage,
+} from './preview-protocol.js';
 import { toolbarStyles } from './toolbar-styles.js';
 
 /**
@@ -35,13 +42,14 @@ function newNonce() {
 /**
  * The query string carries the nonce: unlike the iframe's name, it doesn't
  * follow the iframe to another page, and unlike the hash, in-page links
- * don't change it. It carries the starting Base Style too, so the Preview
- * can load it before the editor connects.
+ * don't change it. It carries the starting Base Style and Preview Font too,
+ * so the Preview can show them before the editor connects.
  */
-function previewUrl(nonce: string, baseStyle: BaseStyleId) {
+function previewUrl(nonce: string, baseStyle: BaseStyleId, previewFont: PreviewFontId) {
   const url = new URL(PREVIEW_URL);
   url.searchParams.set('nonce', nonce);
   url.searchParams.set('base-style', baseStyle);
+  url.searchParams.set('preview-font', previewFont);
   return url.href;
 }
 
@@ -52,9 +60,11 @@ function previewUrl(nonce: string, baseStyle: BaseStyleId) {
  * menu is open, the Preview tries on whichever one is under the pointer or
  * the keyboard's focus. With the pointer outside the menu, or the menu
  * closed, it shows the one chosen. The toolbar takes the colours of the
- * page in the Preview, so it sits on the Base Style it shows.
+ * page in the Preview, so it sits on the Base Style it shows. Its settings
+ * menu chooses the Preview Font, and tries each one on in the same way.
  *
  * @fires base-style-change - when the user chooses a Base Style; `baseStyle` is the new one.
+ * @fires preview-font-change - when the user chooses a Preview Font; `previewFont` is the new one.
  */
 @customElement('preview-pane')
 export class PreviewPane extends LitElement {
@@ -103,8 +113,13 @@ export class PreviewPane extends LitElement {
 
   @property() baseStyle: BaseStyleId = DEFAULT_BASE_STYLE;
 
+  @property() previewFont: PreviewFontId = DEFAULT_PREVIEW_FONT;
+
   /** The Base Style being tried on from the open menu, shown in place of `baseStyle` until one is chosen. */
   @state() tryingOn?: BaseStyleId;
+
+  /** The Preview Font being tried on from the open menu, shown in place of `previewFont` until one is chosen. */
+  @state() tryingOnFont?: PreviewFontId;
 
   /** Identifies the current iframe; a new one gets a new nonce. */
   @state() nonce = newNonce();
@@ -114,12 +129,13 @@ export class PreviewPane extends LitElement {
 
   /**
    * The current iframe's URL. Fixed when the iframe is made, so choosing a
-   * Base Style doesn't navigate it.
+   * Base Style or Preview Font doesn't navigate it.
    */
   #src = '';
 
   #refreshIcon = icon(RefreshCw);
   #chevronIcon = icon(ChevronDown);
+  #settingsIcon = icon(Settings);
 
   /** The Base Style on screen: the one being tried on, or else the one chosen. */
   get #shownStyle() {
@@ -161,6 +177,7 @@ export class PreviewPane extends LitElement {
       if (isPageColorsMessage(data)) this.pageColors = { background: data.background, text: data.text };
     };
     this.#sendBaseStyle();
+    this.#sendPreviewFont();
     this.#sendSource();
   };
 
@@ -171,6 +188,14 @@ export class PreviewPane extends LitElement {
 
   #sendBaseStyle() {
     const message: BaseStyleMessage = { type: 'graphix:base-style', baseStyle: this.#shownStyle };
+    this.#port?.postMessage(message);
+  }
+
+  #sendPreviewFont() {
+    const message: PreviewFontMessage = {
+      type: 'graphix:preview-font',
+      previewFont: this.tryingOnFont ?? this.previewFont,
+    };
     this.#port?.postMessage(message);
   }
 
@@ -197,12 +222,36 @@ export class PreviewPane extends LitElement {
     if (event.newState === 'closed') this.tryingOn = undefined;
   }
 
+  /** Tries on the Preview Font whose item has focus, from the pointer or the arrow keys. */
+  #onPreviewFontFocus(event: FocusEvent) {
+    const { value } = event.target as MenuItem;
+    if (isPreviewFontId(value)) this.tryingOnFont = value;
+  }
+
+  /** Leaving the fonts, the pointer puts back the chosen Preview Font, to compare it with the ones tried on. */
+  #onPreviewFontsLeave() {
+    this.tryingOnFont = undefined;
+  }
+
+  /** Closed without a choice, the menu puts back the Preview Font that was chosen. */
+  #onPreviewSettingsMenuToggle(event: ToggleEvent) {
+    if (event.newState === 'closed') this.tryingOnFont = undefined;
+  }
+
+  #onPreviewFontSelect(event: Event) {
+    const { value } = event.target as MenuItem;
+    if (!isPreviewFontId(value)) return;
+    this.previewFont = value;
+    this.dispatchEvent(new Event('preview-font-change'));
+  }
+
   protected willUpdate(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('nonce')) this.#src = previewUrl(this.nonce, this.baseStyle);
+    if (changed.has('nonce')) this.#src = previewUrl(this.nonce, this.baseStyle, this.previewFont);
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
     if (changed.has('baseStyle') || changed.has('tryingOn')) this.#sendBaseStyle();
+    if (changed.has('previewFont') || changed.has('tryingOnFont')) this.#sendPreviewFont();
     if (changed.has('source')) this.#sendSource();
   }
 
@@ -245,6 +294,34 @@ export class PreviewPane extends LitElement {
         >
           ${this.#refreshIcon}
         </button>
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="Preview settings"
+          title="Preview settings"
+          aria-haspopup="menu"
+          popovertarget="preview-settings-menu"
+        >
+          ${this.#settingsIcon}
+        </button>
+        <context-menu
+          id="preview-settings-menu"
+          aria-label="Preview settings"
+          align="end"
+          @toggle=${this.#onPreviewSettingsMenuToggle}
+        >
+          <menu-group
+            label="Font"
+            @focusin=${this.#onPreviewFontFocus}
+            @menu-select=${this.#onPreviewFontSelect}
+            @pointerleave=${this.#onPreviewFontsLeave}
+          >
+            ${PREVIEW_FONTS.map(
+              ({ id, label }) =>
+                html`<menu-item type="radio" value=${id} .checked=${id === this.previewFont}>${label}</menu-item>`,
+            )}
+          </menu-group>
+        </context-menu>
       </header>
       ${keyed(
         this.nonce,

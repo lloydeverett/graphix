@@ -264,7 +264,7 @@ test("keeps the search panel at the toolbar's size whatever the text size", asyn
   const text = await fontSize('.cm-line');
   // As the toolbar's controls are.
   const toolbar = await page
-    .getByRole('button', { name: 'Settings' })
+    .getByRole('button', { name: 'Settings', exact: true })
     .evaluate((element) => getComputedStyle(element).fontSize);
   expect(field).toBe(toolbar);
   expect(await fontSize('.cm-search .cm-button')).toBe(field);

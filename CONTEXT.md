@@ -20,6 +20,10 @@ _Avoid_: reload, reset
 The stylesheet the Preview starts from, before any styles in the Source: water.css (the default, dark or light to match the user's colour scheme), the browser's defaults ("HTML only"), or one of the classless stylesheets bundled from cssbed.com. Changing it restyles the Preview in place. While its menu is open, the Preview tries on the Base Style under the pointer or the keyboard's focus, without changing the one chosen.
 _Avoid_: theme, skin; "previewing" a Base Style (say "trying it on")
 
+**Preview Font**:
+The font the Preview's text is shown in, over the Base Style's: Lato (the default) or Inter, bundled with graphix, or System, which leaves the Base Style's own. Code keeps the Base Style's monospace font, Diagrams keep Mermaid's, and the Source's own styles win over it. Changing it restyles the Preview in place, and while its menu is open, the Preview tries on the font under the pointer or the keyboard's focus, as it does a Base Style.
+_Avoid_: typeface, preview theme
+
 **Diagram**:
 A `<gx-mermaid>` element in the Source, drawn from the Mermaid text inside it.
 _Avoid_: chart, graph

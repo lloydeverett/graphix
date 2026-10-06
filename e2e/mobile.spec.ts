@@ -26,8 +26,8 @@ test('uses a text size that was picked, even a smaller one', async ({ editor, pa
   const fontSize = await editor.sourceBox.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
   expect(fontSize).toBe(12);
 
-  await page.getByRole('button', { name: 'Settings' }).tap();
-  await expect(page.getByRole('menu', { name: 'Settings' }).getByRole('status')).toHaveText('12');
+  await page.getByRole('button', { name: 'Settings', exact: true }).tap();
+  await expect(page.getByRole('menu', { name: 'Settings', exact: true }).getByRole('status')).toHaveText('12');
 });
 
 // Emulation has no collapsing browser toolbar, so 100vh equals the viewport here

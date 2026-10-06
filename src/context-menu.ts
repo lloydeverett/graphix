@@ -22,7 +22,8 @@ function deepActiveElement() {
  * the window loses focus, and returns focus to wherever it was before.
  *
  * Arrow keys, Home and End move between items, in the order they're in the
- * menu, however they're laid out; Enter or Space chooses one.
+ * menu, however they're laid out; Enter or Space chooses one. Put items in a
+ * `<menu-group>` to give them a title.
  */
 @customElement('context-menu')
 export class ContextMenu extends LitElement {
@@ -40,6 +41,8 @@ export class ContextMenu extends LitElement {
       background: var(--bg);
       color: var(--fg);
       font-size: var(--control-font-size);
+      /* Not whatever alignment the anchor's surroundings have. */
+      text-align: start;
       /* It's for choosing, not reading: a double click shouldn't select a word. */
       user-select: none;
       box-shadow: 0 4px 16px var(--shadow);
@@ -277,9 +280,53 @@ export class MenuItem extends LitElement {
   }
 }
 
+/**
+ * A section of a `<context-menu>`: the `<menu-item>`s in it, under its
+ * `label`. Set apart by a line from anything before it in the menu.
+ */
+@customElement('menu-group')
+export class MenuGroup extends LitElement {
+  static styles = css`
+    :host {
+      display: block;
+    }
+
+    :host(:not(:first-child)) {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .label {
+      padding: 4px 12px 4px 8px;
+      font-size: 0.85em;
+      font-weight: 600;
+      color: var(--syntax-comment);
+    }
+  `;
+
+  /** The section's title, shown above its items and naming it for assistive tech. */
+  @property() label = '';
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.setAttribute('role', 'group');
+  }
+
+  protected willUpdate() {
+    this.setAttribute('aria-label', this.label);
+  }
+
+  render() {
+    // Named by aria-label already, so not read out a second time.
+    return html`<div class="label" aria-hidden="true">${this.label}</div><slot></slot>`;
+  }
+}
+
 declare global {
   interface HTMLElementTagNameMap {
     'context-menu': ContextMenu;
     'menu-item': MenuItem;
+    'menu-group': MenuGroup;
   }
 }
