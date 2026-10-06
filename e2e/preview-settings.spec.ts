@@ -80,6 +80,34 @@ test("the Source's styles win over the Preview's font", async ({ editor }) => {
   await expect.poll(previewFontFamily(editor, 'p')).toBe('Lato, sans-serif');
 });
 
+test("a font the Source sets on an element reaches everything in it, over the Preview's font", async ({ editor }) => {
+  await editor.setSource(`
+    <style>.card { font-family: serif }</style>
+    <div class="card"><h2>Card</h2><p>In the card <button>Go</button></p></div>
+    <div style="font-family: cursive"><p id="inline">Inline</p></div>
+    <p id="outside">Outside</p>
+  `);
+  await expect(editor.preview.locator('#outside')).toHaveText('Outside');
+  for (const selector of ['.card h2', '.card p', '.card button']) {
+    await expect.poll(previewFontFamily(editor, selector)).toBe('serif');
+  }
+  await expect.poll(previewFontFamily(editor, '#inline')).toBe('cursive');
+  await expect.poll(previewFontFamily(editor, '#outside')).toBe('Lato, sans-serif');
+
+  // Or on the body.
+  await editor.setSource('<style>body { font-family: serif }</style><h1>Title</h1><p>Text</p>');
+  await expect(editor.preview.locator('h1')).toHaveText('Title');
+  await expect.poll(previewFontFamily(editor, 'h1')).toBe('serif');
+  await expect.poll(previewFontFamily(editor, 'p')).toBe('serif');
+});
+
+test("the Preview's font wins over the Base Style's however specific its rules", async ({ editor }) => {
+  // thebestmotherfucking sets `p.fakepre { font-family: monospace }`.
+  await editor.setSource('<p class="fakepre">fake pre</p>');
+  await editor.chooseBaseStyle('thebestmotherfucking');
+  await expect.poll(previewFontFamily(editor, 'p')).toBe('Lato, sans-serif');
+});
+
 test('choosing a font restyles the Preview in place, and keeps the choice', async ({ editor, page }) => {
   await editor.setSource('<p>styled</p>');
   await expect(editor.preview.getByText('styled')).toBeVisible();

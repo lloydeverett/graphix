@@ -17,5 +17,6 @@ with each `url()` pointing at a copy of its woff2 file instead, for:
 - `inter.css`: `family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900`
 
 The editor's `styles.css` imports Cascadia Mono, for the Source, and Inter,
-for its controls; the Preview's `preview-fonts.css` imports Lato and Inter. The files are split by
-`unicode-range`, so a browser downloads only those it needs.
+for its controls; the Preview's `preview-fonts.css` imports Lato and Inter.
+The files are split by `unicode-range`, so a browser downloads only those it
+needs.

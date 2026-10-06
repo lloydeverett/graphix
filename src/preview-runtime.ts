@@ -1,4 +1,4 @@
-import { BASE_STYLE_SHEETS } from './base-style-sheets.js';
+import { BASE_STYLE_SHEETS, type Stylesheet } from './base-style-sheets.js';
 import { type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';
 import './block-source-scripts.js';
 import './gx-mermaid.js';
@@ -57,8 +57,9 @@ function reportPageColors() {
 }
 
 /**
- * The Preview Font's stylesheet. The Base Style's go before it, so its rules
- * win over theirs.
+ * The Preview Font's stylesheet. Its rules are in a cascade layer after the
+ * Base Style's, so they win over any of the Base Style's, and lose to any of
+ * the Source's, however specific.
  */
 const previewFontLink = document.createElement('link');
 previewFontLink.rel = 'stylesheet';
@@ -68,30 +69,41 @@ function showPreviewFont(id: PreviewFontId) {
   document.documentElement.dataset.previewFont = id;
 }
 
-/** The links to the shown Base Style's stylesheets; preview.html starts with none. */
-let baseStyleLinks: HTMLLinkElement[] = [];
+/** The shown Base Style's stylesheets; preview.html starts with none. */
+let baseStyleSheets: HTMLStyleElement[] = [];
 
 /** The Base Style on screen, and the one last asked for, which may be loading. */
 let shownStyle: BaseStyleId = 'none';
 let wantedStyle: BaseStyleId = 'none';
 
-function removeLinks(links: HTMLLinkElement[]) {
-  for (const link of links) link.remove();
+function removeSheets(sheets: HTMLStyleElement[]) {
+  for (const sheet of sheets) sheet.remove();
 }
 
-function settle(id: BaseStyleId, links: HTMLLinkElement[]) {
-  removeLinks(baseStyleLinks);
-  baseStyleLinks = links;
+function settle(id: BaseStyleId, sheets: HTMLStyleElement[]) {
+  removeSheets(baseStyleSheets);
+  baseStyleSheets = sheets;
   shownStyle = id;
   document.documentElement.dataset.baseStyle = id;
   reportPageColors();
 }
 
-function loaded(link: HTMLLinkElement) {
+/** Settles when a stylesheet, and anything it imports, has loaded or failed to. */
+function loaded(sheet: HTMLLinkElement | HTMLStyleElement) {
   return new Promise<void>((resolve, reject) => {
-    link.addEventListener('load', () => resolve());
-    link.addEventListener('error', reject);
+    sheet.addEventListener('load', () => resolve());
+    sheet.addEventListener('error', reject);
   });
+}
+
+/**
+ * A stylesheet importing `href` into the `base-style` cascade layer: a link
+ * can't put a stylesheet in a layer.
+ */
+function baseStyleSheet({ href, media }: Stylesheet) {
+  const sheet = document.createElement('style');
+  sheet.textContent = `@import url("${href}") layer(base-style)${media ? ` ${media}` : ''};`;
+  return sheet;
 }
 
 /**
@@ -102,26 +114,20 @@ function loaded(link: HTMLLinkElement) {
 async function showBaseStyle(id: BaseStyleId) {
   if (id === wantedStyle) return;
   wantedStyle = id;
-  const links = BASE_STYLE_SHEETS[id].map(({ href, media }) => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    if (media) link.media = media;
-    return link;
-  });
+  const sheets = BASE_STYLE_SHEETS[id].map(baseStyleSheet);
   // A stylesheet loads even when its media doesn't match, so wait for all.
-  const loading = Promise.all(links.map(loaded));
-  previewFontLink.before(...links);
+  const loading = Promise.all(sheets.map(loaded));
+  document.head.append(...sheets);
   try {
     await loading;
   } catch {
-    removeLinks(links);
+    removeSheets(sheets);
     if (wantedStyle === id) wantedStyle = shownStyle;
     return;
   }
   // Another Base Style was chosen while these loaded.
-  if (wantedStyle !== id) return removeLinks(links);
-  settle(id, links);
+  if (wantedStyle !== id) return removeSheets(sheets);
+  settle(id, sheets);
 }
 
 const params = new URLSearchParams(location.search);

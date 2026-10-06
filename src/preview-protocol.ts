@@ -8,9 +8,9 @@ import { type PreviewFontId, isPreviewFontId } from './preview-font.js';
  * Instead, on startup the iframe posts a Ready message carrying the nonce it
  * was given in its URL and a MessagePort; the editor then sends each
  * Source, and the Base Style and Preview Font to show it with, over that
- * port, and the iframe replies with its page's colours whenever they change. If the iframe
- * navigates away, the port dies with the old document, so a foreign page never
- * receives the Source.
+ * port, and the iframe replies with its page's colours whenever they change.
+ * If the iframe navigates away, the port dies with the old document, so a
+ * foreign page never receives the Source.
  */
 
 export type ReadyMessage = { type: 'graphix:ready'; nonce: string };

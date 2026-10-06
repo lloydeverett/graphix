@@ -51,7 +51,7 @@ const theme = EditorView.theme({
   // CodeMirror shrinks these to under the panel's size, or fixes it; keep them at it, as the toolbar's controls are.
   // As specific as CodeMirror's rule for a search's labels, or it wins.
   '.cm-textfield, .cm-button, .cm-panels .cm-panel label, .cm-dialog-close': { fontSize: 'inherit' },
-  // Fields and buttons take the browser's font, not the editor's controls'.
+  // Fields and buttons take the font of the editor's controls, not the browser's.
   '.cm-textfield, .cm-button': { fontFamily: 'inherit' },
   '.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
 });

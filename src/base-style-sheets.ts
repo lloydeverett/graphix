@@ -1,6 +1,6 @@
 import type { BaseStyleId } from './base-style.js';
 
-/** A stylesheet to link to, for screens matching `media` if it's given. */
+/** A stylesheet to import, for screens matching `media` if it's given. */
 export type Stylesheet = { href: string; media?: string };
 
 const WATER_DARK = new URL('./base-styles/water.css-dark.css', import.meta.url).href;
@@ -8,7 +8,7 @@ const WATER_LIGHT = new URL('./base-styles/water.css-light.css', import.meta.url
 const DARK_SCHEME = '(prefers-color-scheme: dark)';
 
 /**
- * The stylesheets each Base Style links to. Parcel builds each into its own
+ * The stylesheets each Base Style imports. Parcel builds each into its own
  * file, so the Preview fetches only the ones it uses, and only from our
  * origin. Only the Preview imports this.
  */

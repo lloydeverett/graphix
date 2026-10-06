@@ -1,22 +1,31 @@
 /*
  * The Preview Font, over the Base Style's, chosen by the root's
- * `data-preview-font`. The Preview links this after the Base Style, so these
- * rules win over the Base Style's that are as specific, such as `h1`, but
- * lose to the Source's own styles. Code stays in the Base Style's monospace
- * font, and Diagrams in Mermaid's.
+ * `data-preview-font`. The Preview imports the Base Style into the
+ * `base-style` layer, so these rules win over all of its, and lose to all of
+ * the Source's, which are in no layer: a font the Source sets on an element is
+ * inherited by everything in it. Code keeps the Base Style's monospace font,
+ * and Diagrams Mermaid's.
  */
+@layer base-style, preview-font;
+
 @import './fonts/lato/lato.css';
 @import './fonts/inter/inter.css';
 
-:root[data-preview-font='lato'] {
-  --graphix-preview-font: 'Lato', sans-serif;
-}
+@layer preview-font {
+  :root[data-preview-font='lato'] {
+    --graphix-preview-font: 'Lato', sans-serif;
+  }
 
-:root[data-preview-font='inter'] {
-  --graphix-preview-font: 'Inter', sans-serif;
-}
+  :root[data-preview-font='inter'] {
+    --graphix-preview-font: 'Inter', sans-serif;
+  }
 
-:where(:root:not([data-preview-font='system'])) body,
-:where(:root:not([data-preview-font='system']) body) :not(code, kbd, samp, pre, pre *, svg *) {
-  font-family: var(--graphix-preview-font);
+  :root:not([data-preview-font='system']) body {
+    font-family: var(--graphix-preview-font);
+  }
+
+  /* SVG text can set its font in an attribute, which any layer would beat. */
+  :root:not([data-preview-font='system']) body :not(code, kbd, samp, pre, svg *) {
+    font-family: inherit;
+  }
 }

@@ -116,7 +116,7 @@ export class PreviewPane extends LitElement {
   @property() previewFont: PreviewFontId = DEFAULT_PREVIEW_FONT;
 
   /** The Base Style being tried on from the open menu, shown in place of `baseStyle` until one is chosen. */
-  @state() tryingOn?: BaseStyleId;
+  @state() tryingOnStyle?: BaseStyleId;
 
   /** The Preview Font being tried on from the open menu, shown in place of `previewFont` until one is chosen. */
   @state() tryingOnFont?: PreviewFontId;
@@ -139,7 +139,7 @@ export class PreviewPane extends LitElement {
 
   /** The Base Style on screen: the one being tried on, or else the one chosen. */
   get #shownStyle() {
-    return this.tryingOn ?? this.baseStyle;
+    return this.tryingOnStyle ?? this.baseStyle;
   }
 
   /** Connects to the current iframe's runtime once it reports ready. */
@@ -202,7 +202,7 @@ export class PreviewPane extends LitElement {
   /** Tries on the Base Style whose item has focus, from the pointer or the arrow keys. */
   #onBaseStyleFocus(event: FocusEvent) {
     const { value } = event.target as MenuItem;
-    if (isBaseStyleId(value)) this.tryingOn = value;
+    if (isBaseStyleId(value)) this.tryingOnStyle = value;
   }
 
   #onBaseStyleSelect(event: Event) {
@@ -214,12 +214,12 @@ export class PreviewPane extends LitElement {
 
   /** Leaving the menu, the pointer puts back the chosen Base Style, to compare it with the ones tried on. */
   #onBaseStyleMenuLeave() {
-    this.tryingOn = undefined;
+    this.tryingOnStyle = undefined;
   }
 
   /** Closed without a choice, the menu puts back the Base Style that was chosen. */
   #onBaseStyleMenuToggle(event: ToggleEvent) {
-    if (event.newState === 'closed') this.tryingOn = undefined;
+    if (event.newState === 'closed') this.tryingOnStyle = undefined;
   }
 
   /** Tries on the Preview Font whose item has focus, from the pointer or the arrow keys. */
@@ -250,7 +250,7 @@ export class PreviewPane extends LitElement {
   }
 
   protected updated(changed: Map<PropertyKey, unknown>) {
-    if (changed.has('baseStyle') || changed.has('tryingOn')) this.#sendBaseStyle();
+    if (changed.has('baseStyle') || changed.has('tryingOnStyle')) this.#sendBaseStyle();
     if (changed.has('previewFont') || changed.has('tryingOnFont')) this.#sendPreviewFont();
     if (changed.has('source')) this.#sendSource();
   }
