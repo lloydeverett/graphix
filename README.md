@@ -67,6 +67,12 @@ you edit, even as slides before it come and go, until a Refresh. Anything in
 `<gx-slides>` that isn't a `<gx-slide>` isn't shown. It's 16:9 unless you set
 a height or `aspect-ratio`, and scrolls a slide too long to fit.
 
+Give any element the class `gx-fullscreen` to have it cover the whole preview,
+over everything else on the page, with no border or outline: say,
+`<gx-slides class="gx-fullscreen">` to present from. It's painted in the
+page's background colour unless you give it one, and the page under it
+doesn't scroll.
+
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and
 plugins are all blocked. (`pnpm dev` allows `eval`, which Parcel's hot reloading

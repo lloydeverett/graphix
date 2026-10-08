@@ -47,9 +47,12 @@ let reported: PageColorsMessage | undefined;
 
 /** Tells the editor the page's colours when they change, from the Base Style, the Source or the colour scheme. */
 function reportPageColors() {
+  const background = pageBackground();
+  // For .gx-fullscreen, to cover the page in its own colour.
+  document.documentElement.style.setProperty('--gx-page-background', background);
   const message: PageColorsMessage = {
     type: 'graphix:page-colors',
-    background: pageBackground(),
+    background,
     text: getComputedStyle(document.body).color,
   };
   if (message.background === reported?.background && message.text === reported.text) return;
@@ -65,6 +68,11 @@ function reportPageColors() {
 const previewFontLink = document.createElement('link');
 previewFontLink.rel = 'stylesheet';
 previewFontLink.href = new URL('./preview-fonts.css', import.meta.url).href;
+
+/** The classes the Source can use without defining them, such as `gx-fullscreen`. */
+const previewClassesLink = document.createElement('link');
+previewClassesLink.rel = 'stylesheet';
+previewClassesLink.href = new URL('./preview-classes.css', import.meta.url).href;
 
 function showPreviewFont(id: PreviewFontId) {
   document.documentElement.dataset.previewFont = id;
@@ -137,7 +145,8 @@ const initialStyle = params.get('base-style');
 const initialFont = params.get('preview-font');
 showPreviewFont(isPreviewFontId(initialFont) ? initialFont : DEFAULT_PREVIEW_FONT);
 const previewFontLoading = loaded(previewFontLink);
-document.head.append(previewFontLink);
+const previewClassesLoading = loaded(previewClassesLink);
+document.head.append(previewFontLink, previewClassesLink);
 
 const channel = new MessageChannel();
 channel.port1.onmessage = (event) => {
@@ -152,11 +161,12 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reportPage
 const nonce = params.get('nonce') ?? '';
 const ready: ReadyMessage = { type: 'graphix:ready', nonce };
 // The editor sends the Source once we're ready, so wait for the starting Base
-// Style and the Preview Font's stylesheet, or the Source would show unstyled
-// until they load.
+// Style and the Preview Font's and classes' stylesheets, or the Source would
+// show unstyled until they load.
 Promise.allSettled([
   showBaseStyle(isBaseStyleId(initialStyle) ? initialStyle : DEFAULT_BASE_STYLE),
   previewFontLoading,
+  previewClassesLoading,
 ]).finally(() => {
   // Our origin is opaque, so the editor's origin can't be named here; the
   // message carries nothing but the nonce the editor already gave us.
