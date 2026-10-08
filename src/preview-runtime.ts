@@ -3,6 +3,7 @@ import { type BaseStyleId, DEFAULT_BASE_STYLE, isBaseStyleId } from './base-styl
 import './block-source-scripts.js';
 import './gx-mermaid.js';
 import './gx-pan.js';
+import './gx-slides.js';
 import './gx-tree-node.js';
 import { morphChildren } from './morph.js';
 import { DEFAULT_PREVIEW_FONT, type PreviewFontId, isPreviewFontId } from './preview-font.js';

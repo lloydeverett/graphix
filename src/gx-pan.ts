@@ -3,6 +3,7 @@ import { type D3ZoomEvent, type ZoomBehavior, type ZoomTransform, zoom, zoomIden
 import { LitElement, css, html } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
 import { Maximize, Minus, Plus } from 'lucide';
+import { FIELDS } from './fields.js';
 import { icon } from './icon.js';
 
 const ZOOM_STEP = 1.25;
@@ -15,8 +16,6 @@ const PAN_STEP = 40;
 const CLICK_DISTANCE = 4;
 /** The most one wheel event may zoom, as a power of 2 (0.5, about 1.4×). */
 const MAX_WHEEL_ZOOM_LOG2 = 0.5;
-/** Where a press is the content's own, to select text or move a caret, rather than to pan. */
-const FIELDS = 'input, textarea, select, [contenteditable]';
 
 type ZoomEvent = D3ZoomEvent<HTMLElement, unknown>;
 type Point = { x: number; y: number };

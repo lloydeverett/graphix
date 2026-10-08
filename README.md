@@ -50,6 +50,23 @@ Links in it still work: only a drag doesn't follow them. Double-clicking
 selects a word, as anywhere else, rather than zooming, and text fields in it
 work as usual.
 
+Wrap `<gx-slide>` elements in `<gx-slides>` to show them one at a time, to
+present from:
+
+```html
+<gx-slides>
+  <gx-slide><h2>Hello</h2></gx-slide>
+  <gx-slide><p>Second slide</p></gx-slide>
+</gx-slides>
+```
+
+The arrows below the slide, or the left and right arrow keys once it's focused,
+move between slides (Home and End jump to the first and last), and the number
+between the arrows says which slide is showing. The deck stays on its slide as
+you edit, even as slides before it come and go, until a Refresh. Anything in
+`<gx-slides>` that isn't a `<gx-slide>` isn't shown. It's 16:9 unless you set
+a height or `aspect-ratio`, and scrolls a slide too long to fit.
+
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and
 plugins are all blocked. (`pnpm dev` allows `eval`, which Parcel's hot reloading
