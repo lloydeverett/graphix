@@ -34,7 +34,16 @@ test('the Preview settings gear sits just right of Refresh, and opens a menu tit
   await expect(title).toBeVisible();
   await expect(title).toHaveCSS('text-align', 'start');
   expect((await title.boundingBox())!.x).toBeLessThan((await font.boundingBox())!.x + 12);
-  await expect(font.getByRole('menuitemradio')).toHaveText(['Lato', 'Inter', 'System']);
+  await expect(font.getByRole('menuitemradio')).toHaveText([
+    'Lato',
+    'Inter',
+    'Schibsted Grotesk',
+    'Newsreader',
+    'Fraunces',
+    'Literata',
+    'System UI',
+    'System Serif',
+  ]);
   // It opens on the font chosen.
   await expect(font.getByRole('menuitemradio', { name: 'Lato' })).toBeFocused();
 
@@ -122,14 +131,13 @@ test('choosing a font restyles the Preview in place, and keeps the choice', asyn
   await expect.poll(previewFontLoaded(editor, 'Inter')).toBe(true);
   expect(await editor.isMarked('p')).toBe(true);
 
-  // System leaves the Base Style's own font; water.css's starts with system-ui.
   await settingsButton(editor).click();
-  await menu.getByRole('menuitemradio', { name: 'System' }).click();
-  await expect.poll(pFont).toMatch(/^system-ui,/);
+  await menu.getByRole('menuitemradio', { name: 'System Serif' }).click();
+  await expect.poll(pFont).toBe('ui-serif, Georgia, serif');
 
   await page.getByRole('button', { name: 'Refresh' }).click();
   await expect.poll(() => editor.isMarked('p')).toBe(false);
-  await expect.poll(pFont).toMatch(/^system-ui,/);
+  await expect.poll(pFont).toBe('ui-serif, Georgia, serif');
 
   await settingsButton(editor).click();
   await menu.getByRole('menuitemradio', { name: 'Inter' }).click();
@@ -139,6 +147,55 @@ test('choosing a font restyles the Preview in place, and keeps the choice', asyn
   await settingsButton(editor).click();
   await expect(menu.getByRole('menuitemradio', { name: 'Inter' })).toBeChecked();
   await expect(menu.getByRole('menuitemradio', { name: 'Lato' })).not.toBeChecked();
+});
+
+test("each bundled font is served from this site, and System UI and System Serif are the system's own", async ({
+  editor,
+  page,
+}) => {
+  const fontRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.resourceType() === 'font') fontRequests.push(request.url());
+  });
+  await editor.setSource('<h1>Title</h1><p>Text <em>emphasis</em></p>');
+  await expect(editor.preview.locator('h1')).toHaveText('Title');
+  const menu = page.getByRole('menu', { name: 'Preview settings' });
+  /** Each font's menu item, its computed font-family, and its folder in `src/fonts/`. */
+  const fonts = [
+    { name: 'Schibsted Grotesk', family: '"Schibsted Grotesk", sans-serif', folder: 'schibsted-grotesk' },
+    { name: 'Newsreader', family: 'Newsreader, serif', folder: 'newsreader' },
+    { name: 'Fraunces', family: 'Fraunces, serif', folder: 'fraunces' },
+    { name: 'Literata', family: 'Literata, serif', folder: 'literata' },
+  ];
+  for (const { name, family, folder } of fonts) {
+    await settingsButton(editor).click();
+    await menu.getByRole('menuitemradio', { name }).click();
+    for (const selector of ['h1', 'p', 'em']) {
+      await expect.poll(previewFontFamily(editor, selector)).toBe(family);
+    }
+    await expect.poll(previewFontLoaded(editor, name)).toBe(true);
+    expect(fontRequests.some((url) => url.includes(`/${folder}-`))).toBe(true);
+  }
+  const origin = new URL(page.url()).origin;
+  for (const url of fontRequests) expect(new URL(url).origin).toBe(origin);
+
+  // The system's own fonts win over the Base Style's too, as the bundled ones do.
+  await editor.chooseBaseStyle('sakura');
+  await settingsButton(editor).click();
+  await menu.getByRole('menuitemradio', { name: 'System UI' }).click();
+  await expect.poll(previewFontFamily(editor, 'p')).toBe('system-ui, sans-serif');
+  await settingsButton(editor).click();
+  await menu.getByRole('menuitemradio', { name: 'System Serif' }).click();
+  await expect.poll(previewFontFamily(editor, 'p')).toBe('ui-serif, Georgia, serif');
+});
+
+test("System, which left the Base Style's own font, carries over as System UI", async ({ editor, page }) => {
+  await page.evaluate(() => localStorage.setItem('graphix:preview-font', 'system'));
+  await page.reload();
+  await expect(editor.preview.locator('h1')).toBeVisible();
+  await expect.poll(previewFontFamily(editor, 'h1')).toBe('system-ui, sans-serif');
+  await settingsButton(editor).click();
+  await expect(page.getByRole('menuitemradio', { name: 'System UI' })).toBeChecked();
 });
 
 test('starts on Lato when the saved font is gone', async ({ editor, page }) => {
@@ -164,8 +221,8 @@ test('tries on each font under the pointer, and puts back the chosen one if none
   await item('Inter').hover();
   await expect(shownFont).toHaveAttribute('data-preview-font', 'inter');
   await expect.poll(previewFontFamily(editor, 'p')).toBe('Inter, sans-serif');
-  await item('System').hover();
-  await expect(shownFont).toHaveAttribute('data-preview-font', 'system');
+  await item('System UI').hover();
+  await expect(shownFont).toHaveAttribute('data-preview-font', 'system-ui');
   // Restyled in place, like choosing one.
   expect(await editor.isMarked('p')).toBe(true);
 
@@ -183,8 +240,8 @@ test('tries on each font under the pointer, and puts back the chosen one if none
 
   // As does clicking away.
   await settingsButton(editor).click();
-  await item('System').hover();
-  await expect(shownFont).toHaveAttribute('data-preview-font', 'system');
+  await item('System UI').hover();
+  await expect(shownFont).toHaveAttribute('data-preview-font', 'system-ui');
   await editor.sourceBox.click();
   await expect(menu).toBeHidden();
   await expect(shownFont).toHaveAttribute('data-preview-font', 'lato');
@@ -205,12 +262,12 @@ test('tries on fonts from the keyboard, and Enter chooses one', async ({ editor,
   await page.keyboard.press('ArrowDown');
   await expect(shownFont).toHaveAttribute('data-preview-font', 'inter');
   await page.keyboard.press('ArrowDown');
-  await expect(shownFont).toHaveAttribute('data-preview-font', 'system');
+  await expect(shownFont).toHaveAttribute('data-preview-font', 'schibsted-grotesk');
   await page.keyboard.press('Enter');
   await expect(menu).toBeHidden();
   await expect(settingsButton(editor)).toBeFocused();
-  await expect(shownFont).toHaveAttribute('data-preview-font', 'system');
+  await expect(shownFont).toHaveAttribute('data-preview-font', 'schibsted-grotesk');
 
   await page.reload();
-  await expect(shownFont).toHaveAttribute('data-preview-font', 'system');
+  await expect(shownFont).toHaveAttribute('data-preview-font', 'schibsted-grotesk');
 });

@@ -152,7 +152,14 @@ test('the Source is in Cascadia Code, served from this site, and the Font sectio
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(font.getByText('Font', { exact: true })).toBeVisible();
-  await expect(font.getByRole('menuitemradio')).toHaveText(['Cascadia Code', 'Cascadia Mono', 'Fira Code', 'JetBrains Mono', 'System Mono']);
+  await expect(font.getByRole('menuitemradio')).toHaveText([
+    'Cascadia Code',
+    'Cascadia Mono',
+    'Fira Code',
+    'JetBrains Mono',
+    'IBM Plex Mono',
+    'System Mono',
+  ]);
   await expect(font.getByRole('menuitemradio', { name: 'Cascadia Code' })).toBeChecked();
   await expect(menu.getByRole('menuitemcheckbox', { name: 'Use system font' })).toHaveCount(0);
   await font.getByRole('menuitemradio', { name: 'Fira Code' }).click();
@@ -171,6 +178,13 @@ test('the Source is in Cascadia Code, served from this site, and the Font sectio
   await font.getByRole('menuitemradio', { name: 'JetBrains Mono' }).click();
   await expect.poll(fontFamily).toBe('"JetBrains Mono", ui-monospace, monospace');
   await expect.poll(editorFontLoaded(page, 'JetBrains Mono')).toBe(true);
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await font.getByRole('menuitemradio', { name: 'IBM Plex Mono' }).click();
+  await expect.poll(fontFamily).toBe('"IBM Plex Mono", ui-monospace, monospace');
+  await expect.poll(editorFontLoaded(page, 'IBM Plex Mono')).toBe(true);
+  expect(fontRequests.some((url) => /ibm-plex-mono/.test(url))).toBe(true);
+  for (const url of fontRequests) expect(new URL(url).origin).toBe(origin);
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await font.getByRole('menuitemradio', { name: 'System Mono' }).click();
@@ -245,12 +259,12 @@ test('tries on each Editor Font under the pointer or the keyboard, and puts back
   await expect(item('System Mono')).toBeFocused();
   await expect.poll(fontFamily).toBe('ui-monospace, monospace');
   await page.keyboard.press('ArrowUp');
-  await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
+  await expect.poll(fontFamily).toMatch(/^"IBM Plex Mono",/);
   await page.keyboard.press('Enter');
   await expect(menu).toBeHidden();
   await page.reload();
   await expect(editor.sourceBox).toBeVisible();
-  await expect.poll(fontFamily).toMatch(/^"JetBrains Mono",/);
+  await expect.poll(fontFamily).toMatch(/^"IBM Plex Mono",/);
 });
 
 /** Reopens the editor with Vim mode on, and the Source set to `source` if given, focused in Normal mode. */

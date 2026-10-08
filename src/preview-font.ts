@@ -1,12 +1,17 @@
 /**
  * The fonts the Preview's text can be shown in, over the Base Style's: Lato
- * (the default) or Inter, bundled from `src/fonts/`, or System, which leaves
- * the Base Style's own.
+ * (the default), Inter, Schibsted Grotesk, Newsreader, Fraunces or Literata,
+ * bundled from `src/fonts/`, or System UI or System Serif, the system's own.
  */
 export const PREVIEW_FONTS = [
   { id: 'lato', label: 'Lato' },
   { id: 'inter', label: 'Inter' },
-  { id: 'system', label: 'System' },
+  { id: 'schibsted-grotesk', label: 'Schibsted Grotesk' },
+  { id: 'newsreader', label: 'Newsreader' },
+  { id: 'fraunces', label: 'Fraunces' },
+  { id: 'literata', label: 'Literata' },
+  { id: 'system-ui', label: 'System UI' },
+  { id: 'system-serif', label: 'System Serif' },
 ] as const;
 
 export type PreviewFontId = (typeof PREVIEW_FONTS)[number]['id'];

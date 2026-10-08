@@ -10,6 +10,10 @@
 
 @import './fonts/lato/lato.css';
 @import './fonts/inter/inter.css';
+@import './fonts/schibsted-grotesk/schibsted-grotesk.css';
+@import './fonts/newsreader/newsreader.css';
+@import './fonts/fraunces/fraunces.css';
+@import './fonts/literata/literata.css';
 
 @layer preview-font {
   :root[data-preview-font='lato'] {
@@ -20,12 +24,37 @@
     --graphix-preview-font: 'Inter', sans-serif;
   }
 
-  :root:not([data-preview-font='system']) body {
+  :root[data-preview-font='schibsted-grotesk'] {
+    --graphix-preview-font: 'Schibsted Grotesk', sans-serif;
+  }
+
+  :root[data-preview-font='newsreader'] {
+    --graphix-preview-font: 'Newsreader', serif;
+  }
+
+  :root[data-preview-font='fraunces'] {
+    --graphix-preview-font: 'Fraunces', serif;
+  }
+
+  :root[data-preview-font='literata'] {
+    --graphix-preview-font: 'Literata', serif;
+  }
+
+  :root[data-preview-font='system-ui'] {
+    --graphix-preview-font: system-ui, sans-serif;
+  }
+
+  /* ui-serif is New York, in Safari only; other browsers get Georgia. */
+  :root[data-preview-font='system-serif'] {
+    --graphix-preview-font: ui-serif, Georgia, serif;
+  }
+
+  body {
     font-family: var(--graphix-preview-font);
   }
 
   /* SVG text can set its font in an attribute, which any layer would beat. */
-  :root:not([data-preview-font='system']) body :not(code, kbd, samp, pre, svg *) {
+  body :not(code, kbd, samp, pre, svg *) {
     font-family: inherit;
   }
 }

@@ -167,10 +167,16 @@ export class GraphixApp extends LitElement {
     DEFAULT_BASE_STYLE,
   );
 
-  /** The font the Preview's text is shown in, over the Base Style's. */
+  /**
+   * The font the Preview's text is shown in, over the Base Style's. System,
+   * which left the Base Style's own, carries over as System UI.
+   */
   @state() previewFont = load(
     PREVIEW_FONT_STORAGE_KEY,
-    (saved) => (isPreviewFontId(saved) ? saved : undefined),
+    (saved) => {
+      if (saved === 'system') return 'system-ui';
+      return isPreviewFontId(saved) ? saved : undefined;
+    },
     DEFAULT_PREVIEW_FONT,
   );
 

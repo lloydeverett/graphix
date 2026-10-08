@@ -59,16 +59,19 @@ ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
 `src/base-styles/README.md` lists their sources and licenses. It starts on
 **water.css** (the default): dark or light to match your colour scheme.
 The gear beside Refresh picks the preview's font, over the base stylesheet's:
-**Lato** (the default) or **Inter**, bundled with graphix, or **System** to keep
-the stylesheet's own. Code stays monospace, and your own CSS still wins.
+the sans-serifs **Lato** (the default), **Inter** or **Schibsted Grotesk**, the
+serifs **Newsreader**, **Fraunces** or **Literata**, all bundled with graphix,
+or the system's own, **System UI** or **System Serif**. Code stays monospace,
+and your own CSS still wins.
 The gear above the editor opens its settings: turn **Word wrap** off to scroll
 long lines sideways instead, or **Vim mode** on to edit with Vim's keys, and
 pick the editor's font: **Cascadia Code** (the default), **Cascadia Mono**,
-**Fira Code** or **JetBrains Mono**, bundled with graphix, or **System Mono**,
-and its colour scheme: **Default**, light or dark to match your system, or
-**Rosé Pine**, **Rosé Pine Dawn**, **Everforest**, **Evergarden**, **Gruvbox**,
-**Solarized Dark**, **Solarized Light** or **Catppuccin Latte**. Fonts and
-colour schemes are tried on as you point at them.
+**Fira Code**, **JetBrains Mono** or **IBM Plex Mono**, bundled with graphix,
+or **System Mono**, and its colour scheme: **Default**, light or dark to match
+your system, or **Rosé Pine**, **Rosé Pine Dawn**, **Everforest**,
+**Evergarden**, **Gruvbox**, **Solarized Dark**, **Solarized Light** or
+**Catppuccin Latte**. Fonts and colour schemes are tried on as you point at
+them.
 Settings are kept in the browser, like your HTML.
 
 When hosting the built site, serve the preview's scripts with

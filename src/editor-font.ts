@@ -1,13 +1,14 @@
 /**
  * The fonts the Source can be shown in: Cascadia Code (the default), Cascadia
- * Mono (the same, without ligatures), Fira Code or JetBrains Mono, bundled
- * from `src/fonts/`, or System Mono, the system's monospace font.
+ * Mono (the same, without ligatures), Fira Code, JetBrains Mono or IBM Plex
+ * Mono, bundled from `src/fonts/`, or System Mono, the system's monospace font.
  */
 export const EDITOR_FONTS = [
   { id: 'cascadia-code', label: 'Cascadia Code' },
   { id: 'cascadia-mono', label: 'Cascadia Mono' },
   { id: 'fira-code', label: 'Fira Code' },
   { id: 'jetbrains-mono', label: 'JetBrains Mono' },
+  { id: 'ibm-plex-mono', label: 'IBM Plex Mono' },
   { id: 'system-mono', label: 'System Mono' },
 ] as const;
 
