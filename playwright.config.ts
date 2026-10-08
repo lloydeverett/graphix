@@ -17,8 +17,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: true,
   reporter: 'list',
+  // The slowest test takes about 4s. Without an action timeout, a click on a
+  // missing element waits out the whole test.
+  timeout: 15_000,
   use: {
     ...devices['Desktop Chrome'],
+    actionTimeout: 5_000,
     trace: 'retain-on-failure',
   },
   projects: [
