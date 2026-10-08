@@ -89,6 +89,16 @@ test("the Preview's toolbar takes the colour of its page", async ({ editor, page
   await expect(toolbar).toHaveCSS('background-color', 'rgb(255, 255, 255)');
 });
 
+test("the Preview's iframe takes the colour of its page, which shows where it overscrolls", async ({ editor, page }) => {
+  const iframe = page.locator('iframe[title="Preview"]');
+  // water.css-light's background is #fff, and water.css-dark's #202b38.
+  await expect(iframe).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await editor.chooseBaseStyle('water.css-dark');
+  await expect(iframe).toHaveCSS('background-color', 'rgb(32, 43, 56)');
+  await editor.setSource('<style>body { background: rgb(1, 2, 3) }</style>');
+  await expect(iframe).toHaveCSS('background-color', 'rgb(1, 2, 3)');
+});
+
 test("the Preview's toolbar controls take the colour of its page's text", async ({ editor, page }) => {
   const refresh = page.getByRole('button', { name: 'Refresh' });
   // A dark Base Style under the light editor; water.css-dark's text is #dbdbdb.

@@ -60,7 +60,8 @@ function previewUrl(nonce: string, baseStyle: BaseStyleId, previewFont: PreviewF
  * menu is open, the Preview tries on whichever one is under the pointer or
  * the keyboard's focus. With the pointer outside the menu, or the menu
  * closed, it shows the one chosen. The toolbar takes the colours of the
- * page in the Preview, so it sits on the Base Style it shows. Its settings
+ * page in the Preview, so it sits on the Base Style it shows, and the iframe
+ * its background, so overscrolling the page shows that too. Its settings
  * menu chooses the Preview Font, and tries each one on in the same way.
  *
  * @fires base-style-change - when the user chooses a Base Style; `baseStyle` is the new one.
@@ -315,8 +316,11 @@ export class PreviewPane extends LitElement {
       </header>
       ${keyed(
         this.nonce,
+        // Painted in the page's colour too, which shows where the page
+        // overscrolls, rather than the editor's behind it.
         html`<iframe
           title="Preview"
+          style=${styleMap({ 'background-color': this.pageColors?.background })}
           sandbox=${SANDBOX}
           src=${this.#src}
         ></iframe>`,
