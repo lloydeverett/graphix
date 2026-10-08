@@ -14,7 +14,7 @@ export const toolbarStyles = css`
     justify-content: flex-end;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
+    padding: 4px;
     border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
     background: var(--toolbar-background, var(--surface));
     color: var(--toolbar-text, var(--fg));
@@ -32,6 +32,22 @@ export const toolbarStyles = css`
     font: inherit;
     font-size: var(--control-font-size);
     cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  /* Only where there's a pointer to hover with, or a tap leaves it stuck on. */
+  @media (hover: hover) {
+    header button:hover,
+    header select:hover {
+      border-color: color-mix(in srgb, currentColor 45%, transparent);
+      background: color-mix(in srgb, currentColor 12%, transparent);
+    }
+  }
+
+  header button:active {
+    background: color-mix(in srgb, currentColor 18%, transparent);
   }
 
   header .icon-button {

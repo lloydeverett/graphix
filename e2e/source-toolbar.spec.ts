@@ -32,6 +32,31 @@ test('Settings is an icon button that opens a menu', async ({ editor, page }) =>
   await expect(menu).toBeHidden();
 });
 
+test("each toolbar's last button sits as close to its right edge as to the top", async ({ editor, page }) => {
+  await expect(editor.sourceBox).toBeVisible();
+  for (const toolbar of [page.locator('.source > header'), page.locator('preview-pane header')]) {
+    const header = (await toolbar.boundingBox())!;
+    const button = (await toolbar.locator(':scope > button').last().boundingBox())!;
+    const right = header.x + header.width - (button.x + button.width);
+    expect(right).toBeCloseTo(button.y - header.y, 0);
+  }
+});
+
+test('toolbar buttons light up under the pointer', async ({ editor, page }) => {
+  await expect(editor.sourceBox).toBeVisible();
+  for (const button of [
+    page.getByRole('button', { name: 'Settings', exact: true }),
+    page.getByRole('button', { name: 'Refresh' }),
+  ]) {
+    const background = () => button.evaluate((element) => getComputedStyle(element).backgroundColor);
+    const resting = await background();
+    await button.hover();
+    await expect.poll(background).not.toBe(resting);
+    await page.mouse.move(0, 0);
+    await expect.poll(background).toBe(resting);
+  }
+});
+
 /** Checks the settings menu sits just below the gear, its right edge lined up with the gear's, over the Source. */
 async function expectMenuUnderGear(page: Page) {
   const button = (await page.getByRole('button', { name: 'Settings', exact: true }).boundingBox())!;
