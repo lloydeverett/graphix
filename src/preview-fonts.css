@@ -8,24 +8,24 @@
  */
 @layer base-style, preview-font;
 
+@import './fonts/schibsted-grotesk/schibsted-grotesk.css';
 @import './fonts/lato/lato.css';
 @import './fonts/inter/inter.css';
-@import './fonts/schibsted-grotesk/schibsted-grotesk.css';
 @import './fonts/newsreader/newsreader.css';
 @import './fonts/fraunces/fraunces.css';
 @import './fonts/literata/literata.css';
 
 @layer preview-font {
+  :root[data-preview-font='schibsted-grotesk'] {
+    --graphix-preview-font: 'Schibsted Grotesk', sans-serif;
+  }
+
   :root[data-preview-font='lato'] {
     --graphix-preview-font: 'Lato', sans-serif;
   }
 
   :root[data-preview-font='inter'] {
     --graphix-preview-font: 'Inter', sans-serif;
-  }
-
-  :root[data-preview-font='schibsted-grotesk'] {
-    --graphix-preview-font: 'Schibsted Grotesk', sans-serif;
   }
 
   :root[data-preview-font='newsreader'] {

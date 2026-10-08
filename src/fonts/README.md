@@ -34,7 +34,7 @@ with each `url()` pointing at a copy of its woff2 file instead, for:
 
 The editor's `styles.css` imports Cascadia Code, Cascadia Mono, Fira Code,
 JetBrains Mono and IBM Plex Mono, for the Source, and Inter, for its controls;
-the Preview's `preview-fonts.css` imports Lato, Inter, Schibsted Grotesk,
+the Preview's `preview-fonts.css` imports Schibsted Grotesk, Lato, Inter,
 Newsreader, Fraunces and Literata. Importing a font doesn't download
 it: a browser fetches a font's files only once some text is shown in it, and
 only the files whose `unicode-range` that text needs. So only the fonts

@@ -33,7 +33,7 @@ test('only the fonts in use are downloaded, by the editor and the Preview', asyn
   await expect(editor.sourceBox).toBeVisible();
   const opened = await openEditor(context, page.url());
   expect(opened.fonts('editor')()).toEqual(['cascadia-code', 'inter']);
-  expect(opened.fonts('preview')()).toEqual(['lato']);
+  expect(opened.fonts('preview')()).toEqual(['schibsted-grotesk']);
 
   // Each other font only once it's chosen.
   await opened.page.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -42,7 +42,7 @@ test('only the fonts in use are downloaded, by the editor and the Preview', asyn
   await opened.page.getByRole('menuitemradio', { name: 'Inter' }).click();
   await opened.settle();
   await expect.poll(opened.fonts('editor')).toEqual(['cascadia-code', 'ibm-plex-mono', 'inter']);
-  await expect.poll(opened.fonts('preview')).toEqual(['inter', 'lato']);
+  await expect.poll(opened.fonts('preview')).toEqual(['inter', 'schibsted-grotesk']);
   await opened.page.close();
 
   // With System Mono and System Serif, neither downloads any of its own.

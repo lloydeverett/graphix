@@ -59,7 +59,7 @@ ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
 `src/base-styles/README.md` lists their sources and licenses. It starts on
 **water.css** (the default): dark or light to match your colour scheme.
 The gear beside Refresh picks the preview's font, over the base stylesheet's:
-the sans-serifs **Lato** (the default), **Inter** or **Schibsted Grotesk**, the
+the sans-serifs **Schibsted Grotesk** (the default), **Lato** or **Inter**, the
 serifs **Newsreader**, **Fraunces** or **Literata**, all bundled with graphix,
 or the system's own, **System UI** or **System Serif**. Code stays monospace,
 and your own CSS still wins.
