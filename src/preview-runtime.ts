@@ -45,11 +45,14 @@ function pageBackground() {
 
 let reported: PageColorsMessage | undefined;
 
-/** Tells the editor the page's colours when they change, from the Base Style, the Source or the colour scheme. */
+/**
+ * Tells the editor the page's colours when they change, from the Base Style,
+ * the Source or the colour scheme, and sets the background as
+ * `--graphix-page-background`, for `.gx-fullscreen` to cover the page in.
+ */
 function reportPageColors() {
   const background = pageBackground();
-  // For .gx-fullscreen, to cover the page in its own colour.
-  document.documentElement.style.setProperty('--gx-page-background', background);
+  document.documentElement.style.setProperty('--graphix-page-background', background);
   const message: PageColorsMessage = {
     type: 'graphix:page-colors',
     background,
@@ -60,19 +63,23 @@ function reportPageColors() {
   channel.port1.postMessage(message);
 }
 
+/** A link to the stylesheet at `url`, which Parcel finds only as a literal `new URL(..., import.meta.url)`. */
+function stylesheetLink(url: URL) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = url.href;
+  return link;
+}
+
 /**
  * The Preview Font's stylesheet. Its rules are in a cascade layer after the
  * Base Style's, so they win over any of the Base Style's, and lose to any of
  * the Source's, however specific.
  */
-const previewFontLink = document.createElement('link');
-previewFontLink.rel = 'stylesheet';
-previewFontLink.href = new URL('./preview-fonts.css', import.meta.url).href;
+const previewFontLink = stylesheetLink(new URL('./preview-fonts.css', import.meta.url));
 
 /** The classes the Source can use without defining them, such as `gx-fullscreen`. */
-const previewClassesLink = document.createElement('link');
-previewClassesLink.rel = 'stylesheet';
-previewClassesLink.href = new URL('./preview-classes.css', import.meta.url).href;
+const previewClassesLink = stylesheetLink(new URL('./preview-classes.css', import.meta.url));
 
 function showPreviewFont(id: PreviewFontId) {
   document.documentElement.dataset.previewFont = id;

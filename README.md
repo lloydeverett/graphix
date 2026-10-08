@@ -69,9 +69,11 @@ a height or `aspect-ratio`, and scrolls a slide too long to fit.
 
 Give any element the class `gx-fullscreen` to have it cover the whole preview,
 over everything else on the page, with no border or outline: say,
-`<gx-slides class="gx-fullscreen">` to present from. It's painted in the
-page's background colour unless you give it one, and the page under it
-doesn't scroll.
+`<gx-slides class="gx-fullscreen">`, to show nothing but your slides. It's
+painted in the page's background colour unless you give it one, scrolls if its
+content is too big, and the page under it doesn't scroll. Put it at the top
+level of your HTML: inside anything transformed, such as a `<gx-pan>`, it only
+covers that.
 
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and

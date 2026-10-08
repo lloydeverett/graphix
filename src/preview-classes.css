@@ -9,8 +9,10 @@
 @layer preview-classes {
   /*
    * Covers the whole page, over everything else on it, in the page's
-   * background colour (which the runtime sets as --gx-page-background), with
-   * no border or outline of its own. Its place and size are `!important`, so a
+   * background colour (which the runtime sets as --graphix-page-background),
+   * with no border or outline of its own, and scrolls content too big for it.
+   * The colour is laid over Canvas, as the page's is, so a see-through one
+   * still hides what's underneath. Its place and size are `!important`, so a
    * size the Source gives it, or a Pan View's or Slide Deck's own, can't undo
    * it.
    */
@@ -29,8 +31,10 @@
     border: none !important;
     border-radius: 0 !important;
     outline: none !important;
+    overflow: auto;
     z-index: 2147483647;
-    background: var(--gx-page-background, Canvas);
+    background: linear-gradient(var(--graphix-page-background, transparent), var(--graphix-page-background, transparent))
+      Canvas;
   }
 
   /* The page underneath stays put. */
