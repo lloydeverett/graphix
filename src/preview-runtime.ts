@@ -7,7 +7,7 @@ import './gx-slides.js';
 import './gx-tree-node.js';
 import { morphChildren } from './morph.js';
 import { DEFAULT_PREVIEW_FONT, type PreviewFontId, isPreviewFontId } from './preview-font.js';
-// `?url` builds each stylesheet, with its @imports and fonts, into a file of its own.
+// `?url` builds each stylesheet, with anything it references, into a file of its own.
 import previewClassesUrl from './preview-classes.css?url';
 import previewFontsUrl from './preview-fonts.css?url';
 import {
@@ -66,7 +66,6 @@ function reportPageColors() {
   channel.port1.postMessage(message);
 }
 
-/** A link to the stylesheet at `href`. */
 function stylesheetLink(href: string) {
   const link = document.createElement('link');
   link.rel = 'stylesheet';

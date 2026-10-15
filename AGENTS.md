@@ -20,8 +20,9 @@ pnpm test:e2e
 ```
 
 The e2e tests drive a real Chromium against the dev server and a production
-build, which differ (dev serves each module unbundled). A failing test leaves a trace in
-`test-results/`; open it with `pnpm exec playwright show-trace <trace.zip>`.
+build, which differ (dev serves each module unbundled). A failing test leaves
+a trace in `test-results/`; open it with
+`pnpm exec playwright show-trace <trace.zip>`.
 
 When you change behaviour, add or update a test in `e2e/` that would have
 caught the change. A test fails on any console error it doesn't expect, from the
@@ -37,8 +38,8 @@ editor or the Preview; tests that expect some declare them with
 - For hosts that can't send that header (a claude.ai Artifact, say), build with
   `pnpm build:same-origin`. It sets `GRAPHIX_SAME_ORIGIN_PREVIEW=1`, which
   `vite.config.ts` inlines at build time to add `allow-same-origin` to the
-  Preview's sandbox, and uses relative URLs so the site works from a subpath. The CSP
-  still stops the Source from running code, but the Preview is no longer
+  Preview's sandbox, and uses relative URLs so the site works from a subpath.
+  The CSP still stops the Source from running code, but the Preview is no longer
   isolated from the editor by origin, so never make it the default. The
   `same-origin` e2e project runs `pnpm build:same-origin` and serves the result
   from a subpath without CORS, as an Artifact does.
@@ -72,8 +73,8 @@ editor or the Preview; tests that expect some declare them with
   `new URL(..., import.meta.url)`, so the built site never fetches them from
   elsewhere; keep it that way when adding one (see that folder's README).
   Vite copies a file reached that way as it is, so it works only for a
-  stylesheet with no `@import` or relative `url()`. One with them, such as
-  `src/preview-fonts.css`, is imported with `?url` instead, which builds it
-  with what it references.
+  stylesheet with no `@import` or relative `url()`. The Preview's own
+  stylesheets (`src/preview-fonts.css`, `src/preview-classes.css`) are
+  imported with `?url` instead, which builds each with what it references.
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.
