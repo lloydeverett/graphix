@@ -77,8 +77,7 @@ covers that.
 
 The preview runs in a sandboxed iframe, and nothing in your HTML runs code:
 `<script>` elements, inline event handlers, `javascript:` URLs, `eval` and
-plugins are all blocked. (`pnpm dev` allows `eval`, which Parcel's hot reloading
-needs; nothing in your HTML can reach it.) Edits update the preview in place; **Refresh** rebuilds it from scratch.
+plugins are all blocked. Edits update the preview in place; **Refresh** rebuilds it from scratch.
 The menu beside Refresh picks the preview's base stylesheet, from the classless
 ones on [cssbed.com](https://www.cssbed.com/). They're bundled with graphix;
 `src/base-styles/README.md` lists their sources and licenses. It starts on
@@ -117,7 +116,7 @@ pnpm install --frozen-lockfile
 
 ## Scripts
 
-- `pnpm dev`: dev server at http://localhost:1234
+- `pnpm dev`: dev server at http://localhost:5173
 - `pnpm build`: static site in `dist/`
 - `pnpm build:same-origin`: the same, for hosts that can't send CORS headers
   (see above)

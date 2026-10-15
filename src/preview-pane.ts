@@ -18,9 +18,8 @@ import {
 import { toolbarStyles } from './toolbar-styles.js';
 
 /**
- * preview.html is its own Parcel entry, served beside the editor. Reached via
- * `new URL(..., import.meta.url)` instead, Parcel bundles its scripts without
- * running them.
+ * preview.html is its own build entry (see vite.config.ts), served beside the
+ * editor, so its scripts build and run as a page of their own.
  */
 const PREVIEW_URL = new URL('preview.html', document.baseURI);
 
@@ -31,7 +30,7 @@ const PREVIEW_URL = new URL('preview.html', document.baseURI);
  * from running code, but the origin no longer keeps it from the editor.
  */
 const SANDBOX =
-  process.env.GRAPHIX_SAME_ORIGIN_PREVIEW === '1' ? 'allow-scripts allow-same-origin' : 'allow-scripts';
+  import.meta.env.GRAPHIX_SAME_ORIGIN_PREVIEW === '1' ? 'allow-scripts allow-same-origin' : 'allow-scripts';
 
 /** crypto.randomUUID needs a secure context; the dev server may be plain HTTP. */
 function newNonce() {

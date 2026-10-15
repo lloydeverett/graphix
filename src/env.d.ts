@@ -1,2 +1,6 @@
-/** Parcel replaces these at build time. */
-declare const process: { env: { NODE_ENV?: string; GRAPHIX_SAME_ORIGIN_PREVIEW?: string } };
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  /** '1' in a build by `pnpm build:same-origin`, set in vite.config.ts. */
+  readonly GRAPHIX_SAME_ORIGIN_PREVIEW: string;
+}

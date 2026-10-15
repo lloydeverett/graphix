@@ -139,8 +139,8 @@ test.describe('when a Base Style fails to load', () => {
   test('keeps the one it has', async ({ editor, page }) => {
     await expect(editor.preview.locator('h1')).toBeVisible();
     await expect(editor.shownBaseStyle).toHaveAttribute('data-base-style', 'water.css');
-    // Dev builds add a query string.
-    const sakura = /\/sakura\.[^/?]*css(\?|$)/;
+    // Builds add a hash to the name; it mustn't match sakura-vader.css.
+    const sakura = /\/sakura(-[\w-]{8})?\.css$/;
     await page.route(sakura, (route) => route.abort());
 
     const failed = page.waitForEvent('requestfailed', (request) => sakura.test(request.url()));

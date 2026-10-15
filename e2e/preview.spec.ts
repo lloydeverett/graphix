@@ -108,7 +108,7 @@ test.describe('code in the Source', () => {
     expect(await editor.inPreview(() => document.body.dataset.ran ?? null)).toBeNull();
   });
 
-  test('may use eval only in dev, for hot reloading', async ({ editor }, testInfo) => {
+  test('may not use eval, even in dev', async ({ editor }) => {
     await expect(editor.preview.locator('h1')).toBeVisible();
     // Code Playwright evaluates directly may eval regardless of the CSP, so
     // try from a task of the page's own.
@@ -124,6 +124,6 @@ test.describe('code in the Source', () => {
           });
         }),
     );
-    expect(evalWorks).toBe(testInfo.project.name === 'dev');
+    expect(evalWorks).toBe(false);
   });
 });

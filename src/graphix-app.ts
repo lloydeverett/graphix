@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { Minus, Plus, Settings } from 'lucide';
 import './context-menu.js';
 import './preview-pane.js';
-// Parcel drops a type-only import entirely, so import for the side effect too.
+// A type-only import may be dropped entirely, so import for the side effect too.
 import './source-editor.js';
 import './split-pane.js';
 import { DEFAULT_BASE_STYLE, isBaseStyleId } from './base-style.js';

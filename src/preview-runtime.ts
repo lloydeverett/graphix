@@ -7,6 +7,9 @@ import './gx-slides.js';
 import './gx-tree-node.js';
 import { morphChildren } from './morph.js';
 import { DEFAULT_PREVIEW_FONT, type PreviewFontId, isPreviewFontId } from './preview-font.js';
+// `?url` builds each stylesheet, with its @imports and fonts, into a file of its own.
+import previewClassesUrl from './preview-classes.css?url';
+import previewFontsUrl from './preview-fonts.css?url';
 import {
   type PageColorsMessage,
   type ReadyMessage,
@@ -63,11 +66,11 @@ function reportPageColors() {
   channel.port1.postMessage(message);
 }
 
-/** A link to the stylesheet at `url`, which Parcel finds only as a literal `new URL(..., import.meta.url)`. */
-function stylesheetLink(url: URL) {
+/** A link to the stylesheet at `href`. */
+function stylesheetLink(href: string) {
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = url.href;
+  link.href = href;
   return link;
 }
 
@@ -76,10 +79,10 @@ function stylesheetLink(url: URL) {
  * Base Style's, so they win over any of the Base Style's, and lose to any of
  * the Source's, however specific.
  */
-const previewFontLink = stylesheetLink(new URL('./preview-fonts.css', import.meta.url));
+const previewFontLink = stylesheetLink(previewFontsUrl);
 
 /** The classes the Source can use without defining them, such as `gx-fullscreen`. */
-const previewClassesLink = stylesheetLink(new URL('./preview-classes.css', import.meta.url));
+const previewClassesLink = stylesheetLink(previewClassesUrl);
 
 function showPreviewFont(id: PreviewFontId) {
   document.documentElement.dataset.previewFont = id;

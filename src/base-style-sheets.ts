@@ -8,8 +8,8 @@ const WATER_LIGHT = new URL('./base-styles/water.css-light.css', import.meta.url
 const DARK_SCHEME = '(prefers-color-scheme: dark)';
 
 /**
- * The stylesheets each Base Style imports. Parcel builds each into its own
- * file, so the Preview fetches only the ones it uses, and only from our
+ * The stylesheets each Base Style imports. They are built into files of their own,
+ * so the Preview fetches only the ones it uses, and only from our
  * origin. Only the Preview imports this.
  */
 export const BASE_STYLE_SHEETS: Record<BaseStyleId, Stylesheet[]> = {

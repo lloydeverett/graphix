@@ -20,7 +20,7 @@ pnpm test:e2e
 ```
 
 The e2e tests drive a real Chromium against the dev server and a production
-build, which differ (only dev allows `eval`). A failing test leaves a trace in
+build, which differ (dev serves each module unbundled). A failing test leaves a trace in
 `test-results/`; open it with `pnpm exec playwright show-trace <trace.zip>`.
 
 When you change behaviour, add or update a test in `e2e/` that would have
@@ -36,20 +36,18 @@ editor or the Preview; tests that expect some declare them with
   with CORS errors in the console.
 - For hosts that can't send that header (a claude.ai Artifact, say), build with
   `pnpm build:same-origin`. It sets `GRAPHIX_SAME_ORIGIN_PREVIEW=1`, which
-  Parcel inlines at build time to add `allow-same-origin` to the Preview's
-  sandbox, and uses relative URLs so the site works from a subpath. The CSP
+  `vite.config.ts` inlines at build time to add `allow-same-origin` to the
+  Preview's sandbox, and uses relative URLs so the site works from a subpath. The CSP
   still stops the Source from running code, but the Preview is no longer
   isolated from the editor by origin, so never make it the default. The
   `same-origin` e2e project runs `pnpm build:same-origin` and serves the result
   from a subpath without CORS, as an Artifact does.
-- `src/preview.html` must stay a separate Parcel entry (`source` in
-  `package.json`). Reached through `new URL(..., import.meta.url)` instead,
-  Parcel bundles its runtime without ever running it, and the Preview stays
-  empty without any error.
-- Parcel strips TypeScript with SWC, which drops `import { type X } from './m.js'`
-  entirely, though `tsc` keeps it as a side-effect import. If you need the
-  module's side effects (a custom element defining itself), add a plain
-  `import './m.js'`, or the element silently never upgrades.
+- The build is Vite, rooted at `src/`, so paths given to Vite (`--outDir`,
+  say) resolve from there. `src/preview.html` must stay a separate entry
+  (`build.rolldownOptions.input` in `vite.config.ts`), served beside the
+  editor. The dev server's CORS is opened to every origin in
+  `vite.config.ts`: the Preview's opaque origin sends `Origin: null`, which
+  Vite's default refuses.
 - `src/source-editor.ts` wraps CodeMirror without a shadow root, and themes it
   through `EditorView.theme` and tokens in `theme.css` (`--syntax-*`,
   `--editor-system-font-family`). Put media queries in `theme.css`: a rule
@@ -70,14 +68,12 @@ editor or the Preview; tests that expect some declare them with
   (except when zoomed), and `html` and `body` never scroll. Emulation has no
   on-screen keyboard; `e2e/mobile.spec.ts` fakes `visualViewport` instead, and
   only a real iPhone shows whether it works.
-- Parcel's cache can keep a stale copy of an edited module, so a production
-  build (and the `prod` and `same-origin` e2e projects) runs old code while
-  `dev` runs the new. If they disagree for no reason, `rm -rf .playwright`
-  and run the tests again.
 - Base Styles are copied into `src/base-styles/` and referenced with
   `new URL(..., import.meta.url)`, so the built site never fetches them from
   elsewhere; keep it that way when adding one (see that folder's README).
-  (Parcel's `url:` imports work too, but its CSS optimizer warns about them
-  as if they were CSS modules.)
+  Vite copies a file reached that way as it is, so it works only for a
+  stylesheet with no `@import` or relative `url()`. One with them, such as
+  `src/preview-fonts.css`, is imported with `?url` instead, which builds it
+  with what it references.
 - The Preview's CSP is added at runtime by `src/block-source-scripts.ts`.
   Nothing in the Source may run code.

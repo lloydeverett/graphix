@@ -8,9 +8,10 @@ const SAME_ORIGIN_PORT = 4323;
 // The same-origin build is served from here, as an Artifact serves it.
 const SUBPATH = 'app';
 
-// Each server builds into its own directories, so tests never disturb `pnpm dev`.
-const parcelDirs = (name: string, subpath = '') =>
-  `--dist-dir .playwright/${name}-dist/${subpath} --cache-dir .playwright/${name}-cache`;
+// Each server builds into its own directory, so tests never disturb `pnpm dev`.
+const distDir = (name: string) => `.playwright/${name}-dist`;
+// Vite resolves its paths from its root, src/.
+const fromViteRoot = (path: string) => `../${path}`;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -34,17 +35,18 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `parcel --host ${HOST} --port ${DEV_PORT} ${parcelDirs('dev')}`,
+      command: `vite --host ${HOST} --port ${DEV_PORT} --strictPort`,
+      env: { GRAPHIX_VITE_CACHE_DIR: fromViteRoot('.playwright/dev-cache') },
       url: `http://${HOST}:${DEV_PORT}`,
       timeout: 180_000,
     },
     {
-      command: `parcel build ${parcelDirs('prod')} && node e2e/serve-dist.mjs .playwright/prod-dist ${PROD_PORT}`,
+      command: `vite build --outDir ${fromViteRoot(distDir('prod'))} && node e2e/serve-dist.mjs ${distDir('prod')} ${PROD_PORT}`,
       url: `http://${HOST}:${PROD_PORT}`,
       timeout: 180_000,
     },
     {
-      command: `pnpm build:same-origin ${parcelDirs('same-origin', SUBPATH)} && node e2e/serve-dist.mjs .playwright/same-origin-dist ${SAME_ORIGIN_PORT} --no-cors`,
+      command: `pnpm build:same-origin --outDir ${fromViteRoot(distDir('same-origin'))}/${SUBPATH} && node e2e/serve-dist.mjs ${distDir('same-origin')} ${SAME_ORIGIN_PORT} --no-cors`,
       url: `http://${HOST}:${SAME_ORIGIN_PORT}/${SUBPATH}/`,
       timeout: 180_000,
     },

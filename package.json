@@ -3,16 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "description": "Live in-browser HTML editor with Mermaid diagrams",
-  "source": [
-    "src/index.html",
-    "src/preview.html"
-  ],
   "type": "module",
   "packageManager": "pnpm@12.8.1",
   "scripts": {
-    "dev": "parcel",
-    "build": "parcel build",
-    "build:same-origin": "GRAPHIX_SAME_ORIGIN_PREVIEW=1 parcel build --public-url ./",
+    "dev": "vite",
+    "build": "vite build",
+    "build:same-origin": "GRAPHIX_SAME_ORIGIN_PREVIEW=1 vite build --base ./",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test"
   },
@@ -34,12 +30,7 @@
     "@playwright/test": "^1.63.0",
     "@types/d3-selection": "^3.0.12",
     "@types/d3-zoom": "^3.0.8",
-    "buffer": "^6.0.3",
-    "parcel": "^2.16.4",
-    "process": "^0.11.10",
-    "typescript": "^7.0.2"
-  },
-  "@parcel/resolver-default": {
-    "packageExports": true
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
   }
 }
